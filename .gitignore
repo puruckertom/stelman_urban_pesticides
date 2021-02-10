@@ -7,7 +7,7 @@ master/obs_data.txt
 master_test/obs_data.txt
 
 # transition files
-transition_from_chelsvig/
+**/transition_from_chelsvig/
 
 # log files
 **/probpy.log
