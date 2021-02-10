@@ -1,0 +1,21 @@
+# temporary files
+**/temp/
+
+# files I'm not sure if I will upload
+master/SURF_water_placer_bifenthrin.csv
+master/obs_data.txt
+master_test/obs_data.txt
+
+# transition files
+transition_from_chelsvig/
+
+# log files
+**/probpy.log
+
+# cache/checkpoint files
+**/__pycache__/
+**/.ipynb_checkpoints/
+
+# files that are only temporary right now
+src/simulation_procedure.ipynb
+src/pyabc_construct.ipynb
