@@ -5,7 +5,7 @@
 # files I'm not sure if I will upload
 master/SURF_water_placer_bifenthrin.csv
 master/obs_data.txt
-master_test/obs_data.txt
+master_test/test_obs_data.txt
 
 # transition files
 **/transition_from_chelsvig/
