@@ -1,5 +1,6 @@
 # temporary files
 **/temp/
+**/temp/**
 
 # files I'm not sure if I will upload
 master/SURF_water_placer_bifenthrin.csv
@@ -8,6 +9,7 @@ master_test/obs_data.txt
 
 # transition files
 **/transition_from_chelsvig/
+**/transition_from_chelsvig/**
 
 # log files
 **/probpy.log
