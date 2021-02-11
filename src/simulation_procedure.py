@@ -4,9 +4,10 @@
 # In[3]:
 
 
-import os, pandas as pd, numpy as np
+import os, pandas as pd, numpy as np, pickle
 import pytest_shutil, shutil, regex as re, dask, uuid
 from pyswmm import Simulation
+from pyswmm.swmm5 import SWMMException
 import swmmtoolbox.swmmtoolbox as swmmtoolbox
 import time
 from pyswmm.lib import DLL_SELECTION
@@ -209,15 +210,13 @@ def model(params1):
 
     except SWMMException:
         if mode == 'test':
-            with open(os.path.join(main_path,'master_test','test_obs_data.txt'),'r') as read_file:
-                test_dict = eval(read_file.read())
-            test_dict.values = np.NaN
-            return(test_dict)
+            with open(os.path.join(main_path,'master_test','test_err_handling.pkl'),'rb') as read_pkl:
+                test_err_dict = pickle.load(read_pkl)
+            return(test_err_dict)
         elif mode == 'run':
-            with open(os.path.join(master_path,'obs_data.txt'),'r') as read_file:
-                run_dict = eval(read_file.read())
-            run_dict.values = np.NaN
-            return(run_dict)
+            with open(os.path.join(master_path,'err_handling.pkl'),'rb') as read_pkl:
+                run_err_dict = pickle.load(read_pkl)
+            return(run_err_dict)
 
     # #### Get the info to a safe place and then delete the whole temp folder 
 
