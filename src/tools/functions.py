@@ -1,7 +1,7 @@
 import logging, os, sys, __main__ as main
 from datetime import datetime
-# main_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-from paths import *
+# from paths import * # this causes errors, so just paste the part we need
+main_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # set up logger
 ## borrowed from source: "https://docs.python.org/2/howto/logging.html#logging-basic-tutorial"
@@ -91,7 +91,7 @@ def replace_infile_abspaths(inp_path = None, filelines = None, new_path = None, 
     path1cols = path1cols[:5] + [""] + path1cols[-2:]
     # the corrected element of the listified line
     # path1cols[5] = '"' + os.path.join(main_path, "probabilistic_python", "weather", "swmm_wet.txt") + '"'
-    path1cols[5] = '"' + os.path.join(weather_path, "swmm_wet.txt") + '"'
+    path1cols[5] = '"' + os.path.join(main_path, "master", "weather", "swmm_wet.txt") + '"'
     # insert the correction and unlistify!
     filelines[50] = "\t".join(path1cols) + "\n"
 
@@ -102,7 +102,7 @@ def replace_infile_abspaths(inp_path = None, filelines = None, new_path = None, 
     path2cols = path2cols[:2] + [""]
     # the corrected element of the listified line
     # path2cols[2] = '"' + os.path.join(main_path, "app_rates", "calpip", "app_rate_output_for_swmm_48rain.txt") + '"'
-    path2cols[2] = '"' + os.path.join(master_path, "app_rate_output_for_swmm_48rain.txt") + '"'
+    path2cols[2] = '"' + os.path.join(main_path, "master", "app_rate_output_for_swmm_48rain.txt") + '"'
     # insert the correction and unlistify!
     filelines[1384] = "\t".join(path2cols) + "\n"
 
@@ -113,7 +113,7 @@ def replace_infile_abspaths(inp_path = None, filelines = None, new_path = None, 
     path3cols = path3cols[:1] + [""]
     # the corrected element of the listified line
     # path3cols[1] = '"' + os.path.join(main_path, "probabilistic_python", "input", "swmm", "nplesant.jpg") + '"'
-    path3cols[1] = '"' + os.path.join(master_path, "nplesant.jpg") + '"'
+    path3cols[1] = '"' + os.path.join(main_path, "master", "nplesant.jpg") + '"'
     # insert the correction and unlistify!
     filelines[9306] = "\t".join(path3cols) + "\n"
 
