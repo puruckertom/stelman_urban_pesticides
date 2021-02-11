@@ -1,6 +1,5 @@
 # temporary files
 **/temp/
-**/temp/**
 
 # files I'm not sure if I will upload
 master/obs_data.txt
@@ -8,7 +7,6 @@ master_test/test_obs_data.txt
 
 # transition files
 **/transition_from_chelsvig/
-**/transition_from_chelsvig/**
 
 # log files
 **/probpy.log
@@ -16,6 +14,9 @@ master_test/test_obs_data.txt
 # cache/checkpoint files
 **/__pycache__/
 **/.ipynb_checkpoints/
+
+# dask
+**/dask-worker-space/
 
 # files that are only temporary right now
 src/simulation_procedure.ipynb
