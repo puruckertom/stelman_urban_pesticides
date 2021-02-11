@@ -197,14 +197,27 @@ def model(params1):
         os.remove(sout_path)
 
     # load the model {no interaction, write (binary) results to sout_path, use the specified dll}
-    sim = Simulation(inputfile=sinp_path, reportfile=srpt_path, outputfile=sout_path, swmm_lib_path=sdll_path)
-    # simulate the loaded model
-    loginfo("Executing SWMM simmulation with no interaction. Input from <" + sinp_path + ">. Will store output in <" + sout_path + ">.")
-    # sim.execute()
-    with sim as s:
-        for step in s:
-            pass
+    try:
+        sim = Simulation(inputfile=sinp_path, reportfile=srpt_path, outputfile=sout_path, swmm_lib_path=sdll_path)
+            
+        # simulate the loaded model
+        loginfo("Executing SWMM simmulation with no interaction. Input from <" + sinp_path + ">. Will store output in <" + sout_path + ">.")
+        # sim.execute()
+        with sim as s:
+            for step in s:
+                pass
 
+    except SWMMException:
+        if mode == 'test':
+            with open(os.path.join(main_path,'master_test','test_obs_data.txt'),'r') as read_file:
+                test_dict = eval(read_file.read())
+            test_dict.values = np.NaN
+            return(test_dict)
+        elif mode == 'run':
+            with open(os.path.join(master_path,'obs_data.txt'),'r') as read_file:
+                run_dict = eval(read_file.read())
+            run_dict.values = np.NaN
+            return(run_dict)
 
     # #### Get the info to a safe place and then delete the whole temp folder 
 
