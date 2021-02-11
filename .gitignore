@@ -2,8 +2,8 @@
 **/temp/
 
 # files I'm not sure if I will upload
-master/obs_data.txt
-master_test/test_obs_data.txt
+#master/obs_data.txt
+#master_test/test_obs_data.txt
 
 # transition files
 **/transition_from_chelsvig/
