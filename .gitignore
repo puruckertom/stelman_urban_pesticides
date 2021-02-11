@@ -21,5 +21,6 @@ jupyter_notebooks/simulation_procedure.ipynb
 **/dask-worker-space/
 
 # files that are only temporary right now
-src/simulation_procedure.ipynb
-src/pyabc_construct.ipynb
+src/*.ipynb
+jupyter_notebooks/*.py
+!jupyter_notebooks/jn_setup.py

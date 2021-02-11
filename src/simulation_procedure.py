@@ -211,12 +211,16 @@ def model(params1):
     except SWMMException:
         if mode == 'test':
             with open(os.path.join(main_path,'master_test','test_err_handling.pkl'),'rb') as read_pkl:
-                test_err_dict = pickle.load(read_pkl)
-            return(test_err_dict)
+                output_dict = pickle.load(read_pkl)
+
         elif mode == 'run':
             with open(os.path.join(master_path,'err_handling.pkl'),'rb') as read_pkl:
-                run_err_dict = pickle.load(read_pkl)
-            return(run_err_dict)
+                output_dict = pickle.load(read_pkl)
+
+        # cleanup
+        os.system("rm -r " + sdir_path + "/")
+        # return dictionary of nans
+        return(output_dict)
 
     # #### Get the info to a safe place and then delete the whole temp folder 
 
