@@ -6,7 +6,7 @@
 
 from simulation_procedure import model
 from tools.paths import *
-import pandas as pd, pyabc, hydroeval
+import pandas as pd, pyabc, hydroeval as he, numpy as np
 
 
 # In[2]:
@@ -66,13 +66,32 @@ sampler = pyabc.sampler.DaskDistributedSampler(dask_client = client)
 
 # ### 3. Define ABCSMC object
 
+# #### 3.1 Defining a Distance function
+# 
+# We need to refactor the NSE distance function using the pyabc.Distance class.
+# We will need the hydroeval library and the pyabc.SimpleFunctionDistance to do this
+
+# In[6]:
+
+def nse(x, x_0):
+    nse = he.evaluator(he.nse, 
+                       simulation_s = np.array(list(x.values())), 
+                       evaluation = np.array(list(x_0.values())))[0]
+    # print("simulation_s ",np.array(list(x.values())))
+    # print("evaluation ", np.array(list(x_0.values())))
+    # print("nse ", nse)
+    return nse
+NSE = pyabc.SimpleFunctionDistance(fun=nse)
+
+
 # In[7]:
 
 
 abc = pyabc.ABCSMC(model, prior, #distance_function = hydroeval.nse, 
                    population_size = pyabc.AdaptivePopulationSize(40, max_population_size = 40), # just to shorten the run
                    sampler = sampler,
-                   distance_function = pyabc.PNormDistance(p=2))
+                   distance_function = NSE)
+                   #distance_function = pyabc.PNormDistance(p=2))
 
 
 # In[8]:
