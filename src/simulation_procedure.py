@@ -376,8 +376,12 @@ def model(params1):
         shutil.copyfile(old_wet_path, new_wet_path)
 
         # copy exe into new file location
-        old_exe_path = os.path.join(exe_path, "VVWM.exe")
-        new_exe_path = os.path.join(outfall_dir, "VVWM.exe")
+        if sys.platform == "linux" or sys.platform == "linux2":
+            exe_bn = "vvwm"
+        if sys.platform == "win32":
+            exe_bn = "VVWM.exe"
+        old_exe_path = os.path.join(exe_path, exe_bn)
+        new_exe_path = os.path.join(outfall_dir, exe_bn)
         shutil.copyfile(old_exe_path, new_exe_path)
         
         # run vvwm.exe (vvwm.exe [...]/outfall_31_xx/vvwmTransfer.txt)
