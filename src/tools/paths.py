@@ -24,6 +24,9 @@ weather_path = os.path.join(master_path,"weather")
 
 # %%
 temp_path = os.path.join(main_path,"temp")
+if not os.path.exists(temp_path):
+    os.mkdir(temp_path)
+    print("Temp folder created", "\n")
 
 # %%
 obs_path = os.path.join(master_path,"SURF_water_placer_bifenthrin.csv")

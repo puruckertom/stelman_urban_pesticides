@@ -199,6 +199,11 @@ def model(params1):
 
     # load the model {no interaction, write (binary) results to sout_path, use the specified dll}
     try:
+    # the error should happen at this line
+        if params1['MaxRate'] < params1['MinRate']:
+            raise SWMMException(error_code = 200, error_message = "MaxRate < MinRate")
+        if params1['FC'] < params1['WP']:
+            raise SWMMException(error_code = 200, error_message = "FC < WP")
         sim = Simulation(inputfile=sinp_path, reportfile=srpt_path, outputfile=sout_path, swmm_lib_path=sdll_path)
             
         # simulate the loaded model
@@ -208,17 +213,23 @@ def model(params1):
             for step in s:
                 pass
 
-    except SWMMException:
+    except SWMMException as err:
+        print(err)
+        loginfo("Error in  input from <" + sinp_path + ">. " + str(err))
+        print(swmm_params)
         if mode == 'test':
             with open(os.path.join(main_path,'master_test','test_err_handling.pkl'),'rb') as read_pkl:
                 output_dict = pickle.load(read_pkl)
-
+            
         elif mode == 'run':
             with open(os.path.join(master_path,'err_handling.pkl'),'rb') as read_pkl:
                 output_dict = pickle.load(read_pkl)
 
         # cleanup
-        os.system("rm -r " + sdir_path + "/")
+        # print(os.remove(sinp_path))
+        # print(os.system("rm -f " + sinp_path))
+        # print(os.system("rm -f " + sdll_path))
+        print(os.system("rm -r " + sdir_path))
         # return dictionary of nans
         return(output_dict)
 
