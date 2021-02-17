@@ -199,16 +199,17 @@ def model(params1):
 
     # load the model {no interaction, write (binary) results to sout_path, use the specified dll}
     try:
-    # the error should happen at this line
+        # the error should happen at these two lines if ever
         if params1['MaxRate'] < params1['MinRate']:
             raise SWMMException(error_code = 200, error_message = "MaxRate < MinRate")
         if params1['FC'] < params1['WP']:
             raise SWMMException(error_code = 200, error_message = "FC < WP")
+        # if the problem is somewhere else, this will trigger it
         sim = Simulation(inputfile=sinp_path, reportfile=srpt_path, outputfile=sout_path, swmm_lib_path=sdll_path)
-            
+        # if no errors were thrown, we procede with the simulation
+
         # simulate the loaded model
         loginfo("Executing SWMM simmulation with no interaction. Input from <" + sinp_path + ">. Will store output in <" + sout_path + ">.")
-        # sim.execute()
         with sim as s:
             for step in s:
                 pass

@@ -6,7 +6,7 @@
 
 from simulation_procedure import model
 from tools.paths import *
-import pandas as pd, pyabc, hydroeval as he, numpy as np
+import pandas as pd, pyabc, hydroeval as he
 
 
 # In[2]:
@@ -36,7 +36,7 @@ prior = pyabc.Distribution(**{key: pyabc.RV("uniform", loc = v['Min'], scale = v
 # In[3]:
 
 
-prior
+# prior
 
 
 # # Make the .new object
@@ -52,26 +52,14 @@ with open(os.path.join(main_path, 'master_test','test_obs_data.txt'),'r') as rea
 # obs_dict
 
 
-# ### 2. Initialize dask client for dask distributed sampler
 
-# In[5]:
-
-
-from dask.distributed import Client, LocalCluster
-cluster = LocalCluster()#n_workers=(90/2), threads_per_worker = 2)  # Set for 96 vCPU compute instance
-client = Client(cluster)#,timeout=400)
-
-sampler = pyabc.sampler.DaskDistributedSampler(dask_client = client)
-
-
-# ### 3. Define ABCSMC object
-
-# #### 3.1 Defining a Distance function
+# #### 2 Defining a Distance function
 # 
 # We need to refactor the NSE distance function using the pyabc.Distance class.
 # We will need the hydroeval library and the pyabc.SimpleFunctionDistance to do this
 
-# In[6]:
+# In[ ]:
+
 
 def nse(x, x_0):
     nse = he.evaluator(he.nse, 
@@ -83,26 +71,42 @@ def nse(x, x_0):
     return nse
 NSE = pyabc.SimpleFunctionDistance(fun=nse)
 
+# ### 3. Initialize dask client for dask distributed sampler
 
-# In[7]:
+# In[5]:
 
 
-abc = pyabc.ABCSMC(model, prior, #distance_function = hydroeval.nse, 
+from dask.distributed import Client#, LocalCluster
+# cluster = LocalCluster()#n_workers=(90/2), threads_per_worker = 2)  # Set for 96 vCPU compute instance
+# client = Client(cluster)#,timeout=400)
+
+# make it simpler
+if __name__ == "__main__":
+    client = Client()
+    sampler = pyabc.sampler.DaskDistributedSampler(dask_client = client)
+
+
+# ### 4. Define ABCSMC object
+
+# In[11]:
+
+
+abc = pyabc.ABCSMC(model, prior, 
                    population_size = pyabc.AdaptivePopulationSize(40, max_population_size = 40), # just to shorten the run
                    sampler = sampler,
                    distance_function = NSE)
                    #distance_function = pyabc.PNormDistance(p=2))
 
 
-# In[8]:
+# In[12]:
 
 
-abc
+# abc
 
 
-# ### 4. Set up a sqlite db directory
+# ### 5. Set up a sqlite db directory
 
-# In[10]:
+# In[13]:
 
 
 # Initialize a new ABC inference run
@@ -113,15 +117,15 @@ db_path = ("sqlite:///" +
            os.path.join(database_dir, "test_pyabc.db"))
 
 
-# ### 5. Initialize a new abc run
+# ### 6. Initialize a new abc run
 
-# In[11]:
+# In[14]:
 
 
 abc.new(db_path, obs_dict)
 
 
-# In[12]:
+# In[15]:
 
 
 history = abc.run(max_nr_populations=3, minimum_epsilon=0.2)

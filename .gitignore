@@ -8,6 +8,9 @@ jupyter_notebooks/check_on_old_run.ipynb
 jupyter_notebooks/simulation_procedure.ipynb
 jupyter_notebooks/pyabc_quickstart_NSE.ipynb
 
+# web references
+references/
+
 # transition files
 **/transition_from_chelsvig/
 
