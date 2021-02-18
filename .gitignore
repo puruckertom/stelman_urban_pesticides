@@ -16,6 +16,7 @@ references/
 
 # log files
 **/probpy.log
+**/pyabc.log
 
 # cache/checkpoint files
 **/__pycache__/
@@ -29,3 +30,4 @@ src/*.ipynb
 jupyter_notebooks/*.py
 !jupyter_notebooks/jn_setup.py
 src/model_unit_tests.py
+src/cmd_line_prefix.py

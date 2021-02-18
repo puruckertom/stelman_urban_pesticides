@@ -5,7 +5,7 @@ main_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 
 # set up logger
 ## borrowed from source: "https://docs.python.org/2/howto/logging.html#logging-basic-tutorial"
-logging.basicConfig(filename='probpy.log', level=logging.INFO)
+logging.basicConfig(filename='pyabc.log', level=logging.INFO)
 
 '''
 Sets up the function 'loginfo' with the appropriate prefix for the current script
@@ -15,7 +15,9 @@ Sets up the function 'loginfo' with the appropriate prefix for the current scrip
 def log_prefixer(script):
     def loginfo(text):
         logging.info(datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ":: " + script + ": " + text)
-    return(loginfo)
+    def logerror(text):
+        logging.error(datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ":: " + script + ": " + text)
+    return(loginfo, logerror)
 
 # for 01a and 03
 # Borrowed from "https://www.oreilly.com/library/view/python-cookbook/0596001673/ch04s16.html"

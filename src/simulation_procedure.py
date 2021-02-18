@@ -189,7 +189,7 @@ def model(params1):
 
 
     # set up logger
-    loginfo = log_prefixer("04")
+    loginfo, logerror = log_prefixer("04")
 
     # delete pre-existing .out, if present, in order to run swmm agreeably
     if os.path.exists(sout_path):
@@ -216,7 +216,7 @@ def model(params1):
 
     except SWMMException as err:
         print(err)
-        loginfo("Error in  input from <" + sinp_path + ">. " + str(err))
+        logerror("Error in  input from <" + sinp_path + ">. " + str(err))
         print(swmm_params)
         if mode == 'test':
             with open(os.path.join(main_path,'master_test','test_err_handling.pkl'),'rb') as read_pkl:
