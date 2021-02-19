@@ -52,13 +52,15 @@ obs_path = os.path.join(master_path,"SURF_water_placer_bifenthrin.csv")
 
 # %%
 def set_inp_path(mode:str):
-    if mode.lower() == 'test':
+    if mode.lower() == 'debug':
+        return os.path.join(main_path, "master_debug", "NPlesantCreek.inp")
+    elif mode.lower() == 'test':
         return os.path.join(main_path, "master_test", "NPlesantCreek.inp")
     elif mode.lower() == 'run':
         return os.path.join(master_path, "NPlesantCreek.inp")
     else:
-        raise ValueError('Acceptable values of mode include \'test\' and \'run\', not \'' + mode + '\'.')
+        raise ValueError('Acceptable values of mode include \'debug\', \'test\', and \'run\', not \'' + mode + '\'.')
 
 # %%
 # print("To activate test mode, run 'test_mode()'.\nFrom test mode, run 'test_mode(False)' to deactivate.")
-print("To activate test mode, run 'inp_path = set_inp_path('test')'.\nTo activate run mode, run 'inp_path = set_inp_path('run')'.")
+print("To activate debug mode, run 'inp_path = set_inp_path('debug')'.\nTo activate test mode, run 'inp_path = set_inp_path('test')'.\nTo activate run mode, run 'inp_path = set_inp_path('run')'.")
