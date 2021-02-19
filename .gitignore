@@ -17,6 +17,8 @@ references/
 # log files
 **/probpy.log
 **/pyabc.log
+# nse log files
+src/*.txt
 
 # cache/checkpoint files
 **/__pycache__/

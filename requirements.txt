@@ -1,0 +1,15 @@
+# requirements.txt
+# python packages required to have installed to run python scripts in repo
+# last updated 10/28/20
+dask
+numpy
+pandas
+pyDOE2
+pyswmm
+pytest_shutil
+regex
+scipy
+swmmtoolbox
+distributed
+hydroeval
+pyabc

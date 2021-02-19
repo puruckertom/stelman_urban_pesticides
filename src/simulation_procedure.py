@@ -86,8 +86,16 @@ obs_data = pd.read_csv(obs_path, usecols=["Sample_date", "Site_code"],
 
 
 def model(params1):
+    
+    # error prevention
+    if params1['MaxRate'] < params1['MinRate']:
+        params1['MaxRate'], params1['MinRate'] = params1['MinRate'], params1['MaxRate']
+    if params1['FC'] < params1['WP']:
+        params1['FC'], params1['WP'] = params1['WP'], params1['FC']
+    
+    
     # In[9]:
-
+    
     # get them into the objects we need
     swmm_keys = list(params1.keys())[:17]
 
@@ -198,41 +206,50 @@ def model(params1):
         os.remove(sout_path)
 
     # load the model {no interaction, write (binary) results to sout_path, use the specified dll}
-    try:
-        # the error should happen at these two lines if ever
-        if params1['MaxRate'] < params1['MinRate']:
-            raise SWMMException(error_code = 200, error_message = "MaxRate < MinRate")
-        if params1['FC'] < params1['WP']:
-            raise SWMMException(error_code = 200, error_message = "FC < WP")
-        # if the problem is somewhere else, this will trigger it
-        sim = Simulation(inputfile=sinp_path, reportfile=srpt_path, outputfile=sout_path, swmm_lib_path=sdll_path)
-        # if no errors were thrown, we procede with the simulation
 
-        # simulate the loaded model
-        loginfo("Executing SWMM simmulation with no interaction. Input from <" + sinp_path + ">. Will store output in <" + sout_path + ">.")
-        with sim as s:
-            for step in s:
-                pass
+    sim = Simulation(inputfile=sinp_path, reportfile=srpt_path, outputfile=sout_path, swmm_lib_path=sdll_path)
+    # if no errors were thrown, we procede with the simulation
 
-    except SWMMException as err:
-        print(err)
-        logerror("Error in  input from <" + sinp_path + ">. " + str(err))
-        print(swmm_params)
-        if mode == 'test':
-            with open(os.path.join(main_path,'master_test','test_err_handling.pkl'),'rb') as read_pkl:
-                output_dict = pickle.load(read_pkl)
+    # simulate the loaded model
+    loginfo("Executing SWMM simmulation with no interaction. Input from <" + sinp_path + ">. Will store output in <" + sout_path + ">.")
+    with sim as s:
+        for step in s:
+            pass
+    # try:
+    #     # the error should happen at these two lines if ever
+    #     if params1['MaxRate'] < params1['MinRate']:
+    #         raise SWMMException(error_code = 200, error_message = "MaxRate < MinRate")
+    #     if params1['FC'] < params1['WP']:
+    #         raise SWMMException(error_code = 200, error_message = "FC < WP")
+    #     # if the problem is somewhere else, this will trigger it
+    #     sim = Simulation(inputfile=sinp_path, reportfile=srpt_path, outputfile=sout_path, swmm_lib_path=sdll_path)
+    #     # if no errors were thrown, we procede with the simulation
+
+    #     # simulate the loaded model
+    #     loginfo("Executing SWMM simmulation with no interaction. Input from <" + sinp_path + ">. Will store output in <" + sout_path + ">.")
+    #     with sim as s:
+    #         for step in s:
+    #             pass
+
+    # except SWMMException as err:
+    #     print(err)
+    #     logerror("Error in  input from <" + sinp_path + ">. " + str(err))
+    #     print(swmm_params)
+    #     if mode == 'test':
+    #         with open(os.path.join(main_path,'master_test','test_err_handling.pkl'),'rb') as read_pkl:
+    #             output_dict = pickle.load(read_pkl)
             
-        elif mode == 'run':
-            with open(os.path.join(master_path,'err_handling.pkl'),'rb') as read_pkl:
-                output_dict = pickle.load(read_pkl)
+    #     elif mode == 'run':
+    #         with open(os.path.join(master_path,'err_handling.pkl'),'rb') as read_pkl:
+    #             output_dict = pickle.load(read_pkl)
 
-        # cleanup
-        # print(os.remove(sinp_path))
-        # print(os.system("rm -f " + sinp_path))
-        # print(os.system("rm -f " + sdll_path))
-        print(os.system("rm -r " + sdir_path))
-        # return dictionary of nans
-        return(output_dict)
+    #     # cleanup
+    #     # print(os.remove(sinp_path))
+    #     # print(os.system("rm -f " + sinp_path))
+    #     # print(os.system("rm -f " + sdll_path))
+    #     print(os.system("rm -r " + sdir_path))
+    #     # return dictionary of nans
+    #     return(output_dict)
 
     # #### Get the info to a safe place and then delete the whole temp folder 
 
@@ -413,7 +430,7 @@ def model(params1):
 
     # In[ ]:
 
-    os.system("rm -r " + sdir_path + "/")
+    # os.system("rm -r " + sdir_path + "/")
     return(output_dict)
 
 
