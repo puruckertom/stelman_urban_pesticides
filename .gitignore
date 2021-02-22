@@ -4,7 +4,7 @@
 # files I'm not sure if I will upload
 #master/obs_data.txt
 #master_test/test_obs_data.txt
-jupyter_notebooks/check_on_old_run.ipynb
+#jupyter_notebooks/check_on_old_run.ipynb
 jupyter_notebooks/simulation_procedure.ipynb
 jupyter_notebooks/debug_simpro.ipynb
 jupyter_notebooks/pyabc_quickstart_NSE.ipynb
