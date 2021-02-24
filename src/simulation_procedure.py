@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[19]:
 
 
 import os, pandas as pd, numpy as np, pickle
@@ -12,13 +12,12 @@ import time
 from pyswmm.lib import DLL_SELECTION
 import subprocess
 
-
 # ## Set up start up vars
 
 # #### Set mode: 'test' or 'run'
 # Test mode is designed to test code quickly by using a small sample of the data instead of the whole thing
 
-# In[2]:
+# In[20]:
 
 
 # activate 
@@ -27,7 +26,7 @@ mode = 'debug'
 # mode = 'run'
 
 
-# In[3]:
+# In[21]:
 
 
 from tools.paths import *
@@ -39,7 +38,7 @@ dll_path = DLL_SELECTION()
 dll_bn = os.path.basename(dll_path)
 
 
-# In[4]:
+# In[22]:
 
 
 # the 7 outfall names
@@ -61,7 +60,7 @@ with open(os.path.join(master_path,'outfall_partition.txt'),'r') as read_file:
     sub_ids = eval(read_file.read())
 
 
-# In[5]:
+# In[23]:
 
 
 # activate test mode
@@ -69,9 +68,20 @@ inp_path = set_inp_path(mode)
 print(inp_path)
 
 
+# # for debug mode 
+# from pyDOE2 import lhs
+# from scipy.stats import uniform
+# swmm_ranges = pd.read_csv(os.path.join(master_path, "lhs_param_ranges.csv"), index_col=0,
+#                         usecols = ["Parameter","Min", "Range"])
+# vvwm_ranges = pd.read_csv(os.path.join(master_path, "lhs_param_ranges_vvwm.csv"), index_col=0,
+#                         usecols = ["Parameter","Min", "Range"])
+# param_ranges = pd.concat([swmm_ranges, vvwm_ranges], axis = 0)
+# del swmm_ranges, vvwm_ranges
+
+
 # ## Set up input variables and run id
 
-# In[6]:
+# In[24]:
 
 
 '''
@@ -80,7 +90,7 @@ MAKE SURE TO SWITCH WP AND FC IN THE FILE! THEY ARE BACKWARDS AND IT'S ANNOYING
 '''
 
 
-# In[7]:
+# In[25]:
 
 
 # Import Observed Data
@@ -98,8 +108,33 @@ def model(params1):
         vvwm_keys = list(params1.keys())[1:]
         swmm_params = {key: params1[key] for key in swmm_keys}
         vvwm_params = {key: params1[key] for key in vvwm_keys}
+        # lhs1 = lhs(n=36, samples=1)[0]
+        # for i in range(0,36):
+        #     lhs1[i] = param_ranges["Min"][i] + (lhs1[i])*(param_ranges["Range"][i])
+        # params = {}
+        # for key,value in list(zip(param_ranges.index, lhs1)):
+        #     params[key] = value
+        # # now the arguments being passed in
+        # for key in list(params1.keys()):
+        #     params[key] = params1[key]
+        # params1 = params
+        # # error prevention
+        # if params1['MaxRate'] < params1['MinRate']:
+        #     params1['MaxRate'], params1['MinRate'] = params1['MinRate'], params1['MaxRate']
+        # if params1['FC'] < params1['WP']:
+        #     params1['FC'], params1['WP'] = params1['WP'], params1['FC']
+            
+        # # get them into the objects we need
+        # swmm_keys = list(params1.keys())[:17]
+
+        # # wp and fc in this object should be switched. FOR NOW:
+        # swmm_keys = swmm_keys[:10] + ['WP', 'FC'] + swmm_keys[12:]
+
+        # vvwm_keys = list(params1.keys())[17:]
+        # swmm_params = {key: params1[key] for key in swmm_keys}
+        # vvwm_params = {key: params1[key] for key in vvwm_keys}
         
-    elif mode == "test":
+    if mode == "test":
         with open(os.path.join(main_path,'master_test','test_params.txt'),'r') as read_file:
             params1 = eval(read_file.read())
         
@@ -120,7 +155,7 @@ def model(params1):
         vvwm_params = {key: params1[key] for key in vvwm_keys}
 
 
-    # In[9]:
+    # In[27]:
 
 
     # spin up simulation id with this cool too for generating random ids
@@ -130,7 +165,7 @@ def model(params1):
 
     # ## Step 1: make simulation-specific SWMM items
 
-    # In[10]:
+    # In[28]:
 
 
     '''
@@ -138,7 +173,7 @@ def model(params1):
     '''
 
 
-    # In[11]:
+    # In[29]:
 
 
     # make paths to (soon-to-be) directory & files for this simulation using sid
@@ -158,7 +193,7 @@ def model(params1):
     sdll_path = os.path.join(sdir_path, sdll_bn) 
 
 
-    # In[12]:
+    # In[30]:
 
 
     # make the directory
@@ -174,8 +209,9 @@ def model(params1):
 
         # first we need to correct some absolute paths, because they are currently only set to work on the author's computer
         filelines = replace_infile_abspaths(filelines = filelines)
-    
-        if mode == "debug":
+        
+        # if mode == "debug" or mode == "test":
+        if mode == 'debug':
             filelines[172:(172 + 113)] = editted_lines(swmm_dict = swmm_params, Num = 113, row_0 = 172, parameter = "NImperv", Col = 1, flines = filelines)
         
         elif mode == "test":
@@ -210,7 +246,7 @@ def model(params1):
     # In test mode, should take about 2-3 minutes. 
     # In run mode, should take a while.
 
-    # In[13]:
+    # In[31]:
 
 
     # set up logger
@@ -234,7 +270,7 @@ def model(params1):
         
     # #### Get the info to a safe place and then delete the whole temp folder 
 
-    # In[14]:
+    # In[32]:
 
 
     # extract swmm outputs with swmmtoolbox and delete expensive binary files
@@ -246,7 +282,7 @@ def model(params1):
     os.system("rm " + sdir_path + "/*")
 
 
-    # In[15]:
+    # In[33]:
 
 
     # compute daily averages
@@ -254,7 +290,7 @@ def model(params1):
     bif = bif.resample('D').mean()
 
 
-    # In[16]:
+    # In[34]:
 
 
     # conversion for vvwm for runoff and bifenthrin
@@ -262,7 +298,7 @@ def model(params1):
     bif = bif.mul(runf.values)
 
 
-    # In[17]:
+    # In[35]:
 
 
     for o in outfalls:
@@ -310,7 +346,7 @@ def model(params1):
             write_file.writelines(filelines) #JMS 10-21-20
 
 
-    # In[18]:
+    # In[36]:
 
 
     # create a blank df to populate
@@ -324,7 +360,8 @@ def model(params1):
         with open(vvwmTransfer_path,"r") as read_file:
             filelines = read_file.readlines()
         
-        if mode == "debug":
+        # if mode == "debug" or mode == "test":
+        if mode == 'debug':
             filelines[4] = str(vvwm_params[vvwm_keys[0]]) + "\n"
             
         elif mode == "test":
@@ -394,7 +431,7 @@ def model(params1):
         # run vvwm.exe (vvwm.exe [...]/outfall_31_xx/vvwmTransfer.txt)
         command = new_exe_path + ' ' + outfall_file
         subprocess.call(command)
-    
+        
         # read in produced data from the output of the vvwm run we just completed
         output = pd.read_csv(filelines[68][:-1], 
                             usecols = [1], skiprows=5, names = ["davg_bif_conc"])*1000000
@@ -413,7 +450,7 @@ def model(params1):
     output_df = output_df.set_index([["_".join([a,b[3:]]) for a,b in output_df.index]]).sort_index()
 
 
-    # In[19]:
+    # In[38]:
 
 
     output_dict = output_df.to_dict()['davg_bif_conc']
@@ -425,7 +462,7 @@ def model(params1):
     os.system("rm -r " + sdir_path + "/")
 
 
-    # In[22]:
+    # In[18]:
 
 
     return(output_dict)
