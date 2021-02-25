@@ -1,30 +1,27 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[16]:
-
-
+import sys, argparse
+from simulation_procedure import make_model
+from tools.paths import *
+import pandas as pd
+import hydroeval as he
+import numpy as np
+import pyabc
+import uuid
+"""
 import os, pandas as pd, numpy as np, pickle
 import pytest_shutil, shutil, regex as re, dask, uuid
 from pyswmm import Simulation
+from pyswmm.swmm5 import SWMMException
 import swmmtoolbox.swmmtoolbox as swmmtoolbox
 import time
 from pyswmm.lib import DLL_SELECTION
 import subprocess
 
 from tools.paths import *
+
 from tools.functions import *
 
-# this is the path to the default dynamic link library used for running SWMM
-# used by 04
 dll_path = DLL_SELECTION()
 dll_bn = os.path.basename(dll_path)
-
-
-# ## Set up start up vars
-
-# In[ ]:
-
 
 # sub_list_area has the areas of each subcatchment in order
 # used by 05
@@ -36,74 +33,30 @@ with open(os.path.join(master_path,'sub_list_area.txt'),'r') as read_file:
 with open(os.path.join(master_path,'outfall_partition.txt'),'r') as read_file:
     sub_ids = eval(read_file.read())
 
+# from simulation_procedure import model
+# from tools.paths import *
+# import pandas as pd, pyabc, hydroeval as he, numpy as np
 
-# In[21]:
-
-
-"""99% sure we don't need this anymore! """
-
-# # for debug mode
+# # for debug mode 
 # from pyDOE2 import lhs
 # from scipy.stats import uniform
 # swmm_ranges = pd.read_csv(os.path.join(master_path, "lhs_param_ranges.csv"), index_col=0,
-#                            usecols = ["Parameter","Min", "Range"])
+#                         usecols = ["Parameter","Min", "Range"])
 # vvwm_ranges = pd.read_csv(os.path.join(master_path, "lhs_param_ranges_vvwm.csv"), index_col=0,
-#                            usecols = ["Parameter","Min", "Range"])
+#                         usecols = ["Parameter","Min", "Range"])
 # param_ranges = pd.concat([swmm_ranges, vvwm_ranges], axis = 0)
 # del swmm_ranges, vvwm_ranges
-
-
-# In[23]:
-
 
 # Import Observed Data
 obs_data = pd.read_csv(obs_path, usecols=["Sample_date", "Site_code"],
                        parse_dates=["Sample_date"])
 
 
-# #### Set mode: 
-# 
-# ##### Specify if you want to use 'debug', 'test', or 'run' mode 
-# 
-# Debug mode is designed to test code quickly to expose bugs in runs. It only uses 2 of the 36 paramters, 1 of the 7 outfalls, 3 of the 106 summary statistics, and a 103-day-subset of the 3287-day timeframe of the data.
-# 
-# Test mode is designed to impersonate a, minimally time-consuming but complete, run of the simulation procedure by using a small sample of the data.
-# 
-# Run mode is what you want to run when the code is fully baked, and you're ready to get results based on the whole dataset.
-
-# In[17]:
-
-
-# activate 
-# mode = 'debug'
-# mode = 'test'
-# mode = 'run'
-
-
-# In[ ]:
-
-
-# set cleanup level
-# swmm_cleanup = 'full'
-# swmm_cleanup = 'some'
-# swmm_cleanup = 'none'
-
-# vvwm_cleanup = 'full'
-# vvwm_cleanup = 'some'
-# vvwm_cleanup = 'none'
-
-
-# In[ ]:
-
-
 def make_model(mode, swmm_cleanup, vvwm_cleanup):
+    # activate test mode
+    inp_path = set_inp_path(mode)
+    print(inp_path)
 
-
-    # In[19]:
-
-
-    # the 7 outfall names
-    # used by 05+ 
     if mode == "debug":
         outfalls = ['outfall_31_28']
     else:
@@ -111,43 +64,45 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
                     'outfall_31_36', 'outfall_31_38', 'outfall_31_42']
 
 
-    # In[20]:
-
-
-    # activate mode
-    inp_path = set_inp_path(mode)
-    print(inp_path)
-
-
-    # ## Set up input variables and run id
-
-    # In[22]:
-
-
-    '''
-
-    MAKE SURE TO SWITCH WP AND FC IN THE FILE! THEY ARE BACKWARDS AND IT'S ANNOYING
-    '''
-
-
-    # In[ ]:
-
-
     def model(params1):
-
-
-        # In[24]:
-
-
+    
         # import test parameter input
         if mode == "debug":
+
             # get them into the objects we need
             swmm_keys = list(params1.keys())[:1]
             vvwm_keys = list(params1.keys())[1:]
             swmm_params = {key: params1[key] for key in swmm_keys}
             vvwm_params = {key: params1[key] for key in vvwm_keys}
-                        
+            # lhs1 = lhs(n=36, samples=1)[0]
+            # for i in range(0,36):
+            #     lhs1[i] = param_ranges["Min"][i] + (lhs1[i])*(param_ranges["Range"][i])
+            # params = {}
+            # for key,value in list(zip(param_ranges.index, lhs1)):
+            #     params[key] = value
+            # # now the arguments being passed in
+            # for key in list(params1.keys()):
+            #     params[key] = params1[key]
+            # params1 = params
+            # # error prevention
+            # if params1['MaxRate'] < params1['MinRate']:
+            #     params1['MaxRate'], params1['MinRate'] = params1['MinRate'], params1['MaxRate']
+            # if params1['FC'] < params1['WP']:
+            #     params1['FC'], params1['WP'] = params1['WP'], params1['FC']
+                
+            # # get them into the objects we need
+            # swmm_keys = list(params1.keys())[:17]
+
+            # # wp and fc in this object should be switched. FOR NOW:
+            # swmm_keys = swmm_keys[:10] + ['WP', 'FC'] + swmm_keys[12:]
+
+            # vvwm_keys = list(params1.keys())[17:]
+            # swmm_params = {key: params1[key] for key in swmm_keys}
+            # vvwm_params = {key: params1[key] for key in vvwm_keys}
+            
         if mode == "test":
+
+            
             # error prevention
             if params1['MaxRate'] < params1['MinRate']:
                 params1['MaxRate'], params1['MinRate'] = params1['MinRate'], params1['MaxRate']
@@ -164,22 +119,14 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
             swmm_params = {key: params1[key] for key in swmm_keys}
             vvwm_params = {key: params1[key] for key in vvwm_keys}
 
-
-        # In[25]:
-
-
         # spin up simulation id with this cool too for generating random ids
-        # sid = Ite = i = rpt = uuid.uuid4().hex[0:8]
         sid = uuid.uuid4().hex[0:8]
-
+        # set up logger
+        loginfo, logerror = log_prefixer(sid)
 
         # ## Step 1: make simulation-specific SWMM items
 
-        # In[27]:
-
-
         # make paths to (soon-to-be) directory & files for this simulation using sid
-
         # directory
         sdir_path = os.path.join(temp_path, sid)
         # input file
@@ -194,10 +141,7 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
         ## full path
         sdll_path = os.path.join(sdir_path, sdll_bn) 
 
-
-        # In[28]:
-
-
+        # this ifelse stuff is needless inside this fxn, but it's harmless, so I'll leave it for now
         # make the directory
         if not os.path.exists(sdir_path):
             os.mkdir(sdir_path)
@@ -212,10 +156,12 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
             # first we need to correct some absolute paths, because they are currently only set to work on the author's computer
             filelines = replace_infile_abspaths(filelines = filelines)
             
-            if mode == "debug":
+            # if mode == "debug" or mode == "test":
+            if mode == 'debug':
                 filelines[172:(172 + 113)] = editted_lines(swmm_dict = swmm_params, Num = 113, row_0 = 172, parameter = "NImperv", Col = 1, flines = filelines)
             
-            elif mode == "test":
+            #elif mode == "test":
+            else:
                 # 113 = number of subcatchments
                 #for c, par in enumerate(["NImperv", "NPerv", "SImperv", "SPerv", "PctZero"]):
                 for c, par in enumerate(swmm_keys[0:5]):
@@ -242,56 +188,33 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
         # copy a dll file into sdll_path
         shutil.copyfile(dll_path, sdll_path)
 
-
         # #### Execute simulation
         # In test mode, should take about 2-3 minutes. 
         # In run mode, should take a while.
 
-        # In[14]:
-
-
-        # set up logger
-        loginfo, logerror = log_prefixer("04")
-
-        # delete pre-existing .out, if present, in order to run swmm agreeably
-        if os.path.exists(sout_path):
-            loginfo("Deleting current copy of <" + sout_path + "> so new copy can be created.")
-            #print("Deleting current copy of <NPlesantCreek.out> so new copy can be created.")
-            os.remove(sout_path)
+        # This is not needed in practice
+        # # delete pre-existing .out, if present, in order to run swmm agreeably
+        # if os.path.exists(sout_path):
+        #     loginfo("Deleting current copy of <" + sout_path + "> so new copy can be created.")
+        #     #print("Deleting current copy of <NPlesantCreek.out> so new copy can be created.")
+        #     os.remove(sout_path)
 
         # load the model {no interaction, write (binary) results to sout_path, use the specified dll}
 
         sim = Simulation(inputfile=sinp_path, reportfile=srpt_path, outputfile=sout_path, swmm_lib_path=sdll_path)
         # if no errors were thrown, we procede with the simulation
+
         # simulate the loaded model
-        loginfo("Executing SWMM simmulation with no interaction. Input from <" + sinp_path + ">. Will store output in <" + sout_path + ">.")
+        loginfo("Executing SWMM simmulation with no interaction.")# Input from <" + sinp_path + ">. Will store output in <" + sout_path + ">.")
         with sim as s:
             for step in s:
                 pass
-            
-
-        # #### Get the info to a safe place and then delete the whole temp folder 
-
-        # In[15]:
-
 
         # extract swmm outputs with swmmtoolbox and delete expensive binary files
         lab1, lab2 = 'subcatchment,,Runoff_rate', 'subcatchment,,Bifenthrin'
         runf = swmmtoolbox.extract(sout_path, lab1)
         bif = swmmtoolbox.extract(sout_path, lab2)
 
-        loginfo("Deleting <" + sdir_path + "> contents to free up memory.")
-        os.system("rm " + sdir_path + "/*")
-
-
-        # In[16]:
-
-
-        # compute daily averages
-        runf = runf.resample('D').mean()
-        bif = bif.resample('D').mean()
-
-        # clean up
         if swmm_cleanup == 'full':
             loginfo("Deleting swmm temp files to free up memory.")#<" + sdir_path + "> contents to free up memory.")
             os.system("rm " + sdir_path + "/*")
@@ -301,23 +224,20 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
         elif swmm_cleanup == 'none':
             loginfo("Deleting swmm dll file to free up memory.")#<" + sdir_path + "> contents to free up memory.")
             os.system("rm " + sdll_path)
-        
-        
-        # In[17]:
-
+    
+        # compute daily averages
+        runf = runf.resample('D').mean()
+        bif = bif.resample('D').mean()
 
         # conversion for vvwm for runoff and bifenthrin
         runf = runf.mul(86400).mul(0.01).div(sub_list_area)
         bif = bif.mul(runf.values)
 
-
-        # In[18]:
-
-
         for o in outfalls:
             # set pathways
             outfall_dir = os.path.join(sdir_path, o)
             
+            # this ifelse stuff is needless inside this fxn, but it's harmless, so I'll leave it for now
             # make the directory
             if not os.path.exists(outfall_dir):
                 os.mkdir(outfall_dir)
@@ -356,11 +276,7 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
                 # write blanks to dummy file
                 write_file.write('\n\n\n')
                 # read lines from original and append to dummy file
-                write_file.writelines(filelines) #JMS 10-21-20
-
-
-        # In[19]:
-
+                write_file.writelines(filelines) 
 
         # create a blank df to populate
         output_df = pd.DataFrame()
@@ -373,10 +289,12 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
             with open(vvwmTransfer_path,"r") as read_file:
                 filelines = read_file.readlines()
             
-            if mode == "debug":
+            # if mode == "debug" or mode == "test":
+            if mode == 'debug':
                 filelines[4] = str(vvwm_params[vvwm_keys[0]]) + "\n"
                 
-            elif mode == "test":
+            #elif mode == "test":
+            else:
 
                 # why is it 1:8 and not 0:8? Is it a typo?
                 for c, param in enumerate(list(vvwm_keys)[0:8]): # changed from 1:8 2/19/21
@@ -390,14 +308,6 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
                 for c, param in enumerate(list(vvwm_keys)[15:19]):
                     filelines[c+47] = str(vvwm_params[param]) + "\n"
 
-            # enter script 9
-            '''
-            Should I keep this parallel?
-            If not, I don't need 7 copies of the weather file
-            If I do keep it parallel, how much time does that even save?
-            '''
-
-            ''' Keeping it parallel:'''
             # update pathways
             filelines[0] = os.path.join(outfall_dir, "output") + '\n'
             filelines[29] = os.path.join(outfall_dir, "vvwm_wet.dvf") + '\n'
@@ -434,10 +344,10 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
             # copy exe into new file location
             if sys.platform == "linux" or sys.platform == "linux2":
                 exe_bn = "vvwm"
-            elif sys.platform == "win32":
+            if sys.platform == "win32":
                 exe_bn = "VVWM.exe"
             old_exe_path = os.path.join(exe_path, exe_bn)
-            new_exe_path = os.path.join(outfall_dir, "VVWM.exe")
+            new_exe_path = os.path.join(outfall_dir, exe_bn)
             shutil.copyfile(old_exe_path, new_exe_path)
             
             # run vvwm.exe (vvwm.exe [...]/outfall_31_xx/vvwmTransfer.txt)
@@ -460,16 +370,7 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
 
         # sort by date and site
         output_df = output_df.set_index([["_".join([a,b[3:]]) for a,b in output_df.index]]).sort_index()
-
-
-        # In[20]:
-
-
         output_dict = output_df.to_dict()['davg_bif_conc']
-
-
-        # In[21]:
-
 
         # vvwm cleanup
         if vvwm_cleanup == 'none' or vvwm_cleanup == 'some' or vvwm_cleanup == 'full':
@@ -490,19 +391,106 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
         if vvwm_cleanup == 'full' and swmm_cleanup == 'full':
             loginfo("Deleting temp folder.")
             os.system("rm -r " + sdir_path + "/")
-
-
-        # In[22]:
-
-
+        
+        # os.system("rm -r " + sdir_path + "/")
         return(output_dict)
-        # output_dict
 
+    return model
+"""
 
-        # In[ ]:
-
-
-    return(model)
-
-
-    # ### We made it to the post-processing stage!
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-m", "--mode", help = """
+    Specify if you want to use 'debug', 'test', or 'run' mode:\n
+    Debug mode is designed to test code quickly to expose bugs in runs. 
+    It only uses 2 of the 36 paramters, 1 of the 7 outfalls, 3 of the 106 
+    summary statistics, and a 103-day-subset of the 3287-day timeframe of the data.\n
+    Test mode is designed to impersonate a minimally time-consuming, but complete, 
+    run of the simulation procedure by using a small sample of the data.\n
+    Run mode is what you want to run when the code is fully baked, 
+    and you're ready to get results based on the whole dataset.""", required=True, type = str)
+    parser.add_argument("-s", "--swmmcleanup", help = """
+    Specify SWMM cleanup level as 'full', 'some', or 'none':\n
+    If full, each swmm-related file will be deleted after fulfilling its use to save memory.\n
+    If some, executable and binary swmm-related files will be deleted after use, but human-readable files won't.\n
+    If none, only the run-specific copy of the master executable (dll) file will be deleted after use.
+    """, required=True, type = str)
+    parser.add_argument("-v", "--vvwmcleanup", help = """
+    Specify vvwm cleanup level as 'full', 'some', or 'none':\n
+    If full, each vvwm-related file will be deleted after fulfilling its use to save memory.\n
+    If some, all vvwm-related files but one, the human-readable daily output csv file, will be deleted after use.\n
+    If none, only the run-specific copies of the master executable and weather files will be deleted after use.
+    """, required=True, type = str)
+    args = parser.parse_args()
+    # make them lowercase and give them shorter names to go by
+    mode, swmm_cleanup, vvwm_cleanup = args.mode.lower(), args.swmmcleanup.lower(), args.vvwmcleanup.lower()
+    # make sure user provided all legal values
+    assert mode in ["debug", "test", "run"], 'Acceptable values of --mode include \'debug\', \'test\', and \'run\', not \'' + mode + '\'.'
+    assert swmm_cleanup in ["full", "some", "none"], 'Acceptable values of --swmmcleanup include \'full\', \'some\', and \'none\', not \'' + swmm_cleanup + '\'.'
+    assert vvwm_cleanup in ["full", "some", "none"], 'Acceptable values of --vvwmcleanup include \'full\', \'some\', and \'none\', not \'' + vvwm_cleanup + '\'.'
+    '''if mode not in ["debug", "test", "run"]:
+        raise ValueError('Acceptable values of --mode include \'debug\', \'test\', and \'run\', not \'' + mode + '\'.')
+    if swmm_cleanup not in ["full", "some", "none"]:
+        raise ValueError('Acceptable values of --swmmcleanup include \'full\', \'some\', and \'none\', not \'' + swmm_cleanup + '\'.')
+    if vvwm_cleanup not in ["full", "some", "none"]:
+        raise ValueError('Acceptable values of --vvwmcleanup include \'full\', \'some\', and \'none\', not \'' + vvwm_cleanup + '\'.')'''
+    # make the model using the user-input mode and cleanup levels
+    model = make_model(mode = mode, swmm_cleanup = swmm_cleanup, vvwm_cleanup = vvwm_cleanup)
+    #
+    # pyabc_construct stage starts here!
+    #
+    # Priors. Get the values from that csv. SWMM at first. Then VVWM. Then link them together.
+    swmm_ranges = pd.read_csv(os.path.join(master_path, "lhs_param_ranges.csv"), index_col=0, usecols = ["Parameter","Min", "Range"])
+    vvwm_ranges = pd.read_csv(os.path.join(master_path, "lhs_param_ranges_vvwm.csv"), index_col=0, usecols = ["Parameter","Min", "Range"])
+    param_ranges = pd.concat([swmm_ranges, vvwm_ranges], axis = 0)
+    # take just a tiny subset if in debug mode
+    if mode == "debug":
+        param_ranges = param_ranges.loc[['NImperv','kd']]
+    # make the dataframe into a dictionary
+    priors = param_ranges.to_dict("index")
+    # make the dictionary into a pyabc distribution object
+    # borrowed from Jeff: <https://github.com/JeffreyMinucci/bee_neonic_abc/blob/master/pyabc_run.ipynb>
+    prior = pyabc.Distribution(**{key: pyabc.RV("uniform", loc = v['Min'], scale = v['Range']) for key, v in priors.items()})
+    # import the dictionary of observed data (benchmarks for summary statistic comparison) depending on the mode
+    if mode == 'debug':
+        with open(os.path.join(main_path, 'master_debug','debug_obs_data.txt'),'r') as read_file:
+            obs_dict = eval(read_file.read())
+    elif mode == 'test':
+        with open(os.path.join(main_path, 'master_test','test_obs_data.txt'),'r') as read_file:
+            obs_dict = eval(read_file.read())
+    elif mode == 'run':
+        with open(os.path.join(main_path, 'master','obs_data.txt'),'r') as read_file:
+            obs_dict = eval(read_file.read())
+    # use the single core sampler for now because dask is being fussy
+    sampler = pyabc.sampler.SingleCoreSampler()
+    # make the process more transparent
+    sampler.sample_factory.record_rejected = True
+    sampler.show_progress = True
+    # Set up a sqlite db directory with a unique random identifier
+    dbid = uuid.uuid4().hex[0:8]
+    print("Database ID: " + dbid)
+    database_dir = os.path.join(temp_path, 'results_db')  
+    if not os.path.exists(database_dir):
+        os.mkdir(database_dir)
+    db_path = ("sqlite:///" + os.path.join(database_dir, "test_pyabc_" + dbid + ".db"))
+    # make a file to hold onto these NSEs for our own record
+    with open(os.path.join(temp_path, "NSEs_" + dbid + ".txt"), "w") as nse_file:
+        nse_file.write("NSEs\n")
+    # make NSE and NSE distance calculating functions
+    def nse(x, x_0):
+        nse = he.evaluator(he.nse, simulation_s = np.array(list(x.values())), evaluation = np.array(list(x_0.values())))[0]
+        print("nse ", nse)
+        # make record
+        with open(os.path.join(temp_path, "NSEs_" + dbid + ".txt"),"a") as nse_file:
+            nse_file.write(str(nse)+"\n")
+        return nse
+    # NSEs live on [-infinity, 1] and the best NSE is 1
+    # Distances live on [0, infinity and the best distance is 0
+    # Therefore, let's make a formula that's informed by NSE, but has range and properties of a distance function
+    NSED = pyabc.SimpleFunctionDistance(fun = lambda x, x_0: 1 - nse(x, x_0))
+    # make the pyabc Seq Monte Carlo object
+    abc = pyabc.ABCSMC(model, prior, population_size = pyabc.ConstantPopulationSize(40), sampler = sampler, distance_function = NSED)
+    # initialize a new run
+    abc.new(db_path, obs_dict)
+    # run it!
+    history = abc.run(max_nr_populations=2, minimum_epsilon=0.2)
