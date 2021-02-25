@@ -5,25 +5,29 @@
 
 
 # import jn_setup
-from simulation_procedure import model, mode
+# from simulation_procedure import model, mode
 from tools.paths import *
-import pandas as pd, pyabc, hydroeval as he, numpy as np, uuid
+from simulation_procedure import make_model
+import pandas as pd
+import hydroeval as he
+import numpy as np
+import pyabc
+import uuid
 
-
+mode = "test"
+model = make_model(mode = mode, swmm_cleanup = 'none', vvwm_cleanup = 'none')
 # In[2]:
 
 
 """
 Priors. Get the values from that csv. Just for SWMM at first.
 """
-swmm_ranges = pd.read_csv(os.path.join(master_path, "lhs_param_ranges.csv"), index_col=0,
-                           usecols = ["Parameter","Min", "Range"])
+swmm_ranges = pd.read_csv(os.path.join(master_path, "lhs_param_ranges.csv"), index_col=0, usecols = ["Parameter","Min", "Range"])
 
 '''
 Link up with the vvwm priors and make one big list with 36 params
 '''
-vvwm_ranges = pd.read_csv(os.path.join(master_path, "lhs_param_ranges_vvwm.csv"), index_col=0,
-                           usecols = ["Parameter","Min", "Range"])
+vvwm_ranges = pd.read_csv(os.path.join(master_path, "lhs_param_ranges_vvwm.csv"), index_col=0, usecols = ["Parameter","Min", "Range"])
 
 param_ranges = pd.concat([swmm_ranges, vvwm_ranges], axis = 0)
 
@@ -33,8 +37,7 @@ if mode == "debug":
 priors = param_ranges.to_dict("index")
 
 # borrowed from Jeff: <https://github.com/JeffreyMinucci/bee_neonic_abc/blob/master/pyabc_run.ipynb>
-prior = pyabc.Distribution(**{key: pyabc.RV("uniform", loc = v['Min'], scale = v['Range'])
-                        for key, v in priors.items()})
+prior = pyabc.Distribution(**{key: pyabc.RV("uniform", loc = v['Min'], scale = v['Range']) for key, v in priors.items()})
 
 
 # In[3]:
@@ -86,7 +89,9 @@ elif mode == 'run':
 
 # See if this takes all those errors out
 sampler = pyabc.sampler.SingleCoreSampler()
-
+# make the process more transparent
+sampler.sample_factory.record_rejected = True
+sampler.show_progress = True
 
 # ### 3. Set up a sqlite db directory
 
@@ -99,8 +104,7 @@ print(dbid)
 database_dir = os.path.join(temp_path, 'results_db')  
 if not os.path.exists(database_dir):
     os.mkdir(database_dir)
-db_path = ("sqlite:///" +
-           os.path.join(database_dir, "test_pyabc_" + dbid + ".db"))
+db_path = ("sqlite:///" + os.path.join(database_dir, "test_pyabc_" + dbid + ".db"))
 
 
 # ### 4. Defining a Distance function
@@ -120,9 +124,7 @@ with open(os.path.join(temp_path, "NSEs_" + dbid + ".txt"), "w") as nse_file:
 
 
 def nse(x, x_0):
-    nse = he.evaluator(he.nse, 
-                       simulation_s = np.array(list(x.values())), 
-                       evaluation = np.array(list(x_0.values())))[0]
+    nse = he.evaluator(he.nse, simulation_s = np.array(list(x.values())), evaluation = np.array(list(x_0.values())))[0]
     print("nse ", nse)
     # make record
     with open(os.path.join(temp_path, "NSEs_" + dbid + ".txt"),"a") as nse_file:
@@ -141,11 +143,11 @@ NSED = pyabc.SimpleFunctionDistance(fun = lambda x, x_0: 1 - nse(x, x_0))
 # In[10]:
 
 
-abc = pyabc.ABCSMC(model, prior, 
-                   # might fix the dask problem too
-                   population_size = pyabc.ConstantPopulationSize(4), # just to shorten the run
-                   sampler = sampler,
-                   distance_function = NSED)
+abc = pyabc.ABCSMC(model, prior, population_size = pyabc.ConstantPopulationSize(40), sampler = sampler, distance_function = NSED)
+                #    # might fix the dask problem too
+                #    population_size = pyabc.ConstantPopulationSize(4), # just to shorten the run
+                #    sampler = sampler,
+                #    distance_function = NSED)
 
 
 # In[11]:
