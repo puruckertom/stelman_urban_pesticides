@@ -294,13 +294,13 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
         # clean up
         if swmm_cleanup == 'full':
             loginfo("Deleting swmm temp files to free up memory.")#<" + sdir_path + "> contents to free up memory.")
-            os.system("rm " + sdir_path + "/*")
+            rm(os.path.join(sdir_path,"*"))
         elif swmm_cleanup == 'some':
             loginfo("Deleting large swmm temp files to free up memory.")#<" + sdir_path + "> contents to free up memory.")
-            os.system("rm " + sout_path + " " + sdll_path)
+            rm(sout_path, sdll_path)
         elif swmm_cleanup == 'none':
             loginfo("Deleting swmm dll file to free up memory.")#<" + sdir_path + "> contents to free up memory.")
-            os.system("rm " + sdll_path)
+            rm(sdll_path)
         
         
         # In[17]:
@@ -476,20 +476,20 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
             exe_ = os.path.join(sdir_path, "outfall_31_??", exe_bn)
             wet_ = os.path.join(sdir_path, "outfall_31_??", "vvwm_wet.dvf")
             loginfo("Deleting vvwm exe and weather files to free up memory.")
-            os.system("rm " + exe_ + " " + wet_)
+            rm(exe_, wet_)
         if vvwm_cleanup == 'some' or vvwm_cleanup == 'full':
             zts_ = os.path.join(sdir_path, "outfall_31_??", "output.zts")
             analysis_ = os.path.join(sdir_path, "outfall_31_??", "output_NPlesant_Custom_parent_analysis.txt")
             transfer_ = os.path.join(sdir_path, "outfall_31_??", "vvwmTransfer.txt")
             loginfo("Deleting internal vvwm files to free up memory.")
-            os.system("rm " + zts_ + " " + analysis_ + " " + transfer_)
+            rm(zts_, analysis_, transfer_)
         if vvwm_cleanup == 'full':
-            daily_ = os.path.join(sdir_path, "outfall_31_??", "output_NPlesant_Custom_parent_daily.csv")
-            loginfo("Deleting vvwm results file to free up memory.")
-            os.system("rm" + daily_)
+            ofdir_ = os.path.join(sdir_path, "outfall_31_??")
+            loginfo("Deleting vvwm results files and folder to free up memory.")
+            rm(ofdir_)
         if vvwm_cleanup == 'full' and swmm_cleanup == 'full':
             loginfo("Deleting temp folder.")
-            os.system("rm -r " + sdir_path + "/")
+            rm(sdir_path)
 
 
         # In[22]:
