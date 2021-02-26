@@ -229,28 +229,21 @@ def editted_lines(swmm_dict, Num, row_0, parameter, Col, flines):
 
 '''
 Delete the file, files, or directory at a given path location
- Inputs: path <path (str)> -path to the item(s) to be deleted-
-   isdir <bool> -True if path is a directory, False (=default) otherwise-
+ Inputs: path <path (str)> -path to the item to be deleted-
+   *args <path (str)> -path to additional items to be deleted-
  (No output)
 '''
-def rm(path, *args, isdir = False):
-    if isdir:
+def rm(path, *args):
+    try:
+        assert os.system('rm -r ' + path) == 0, "original path removal attempt failed"
+        print("original path removal successful")
+    except AssertionError as err1:
+        #print(err1)
+        path = re.sub(r'\\', r'/', path)
         try:
-            assert os.system('rm -r ' + path) == 1, "original path removal attempt failed"
-        except AssertionError as err1:
-            path = re.sub(r'\\', r'/', path)
-            try:
-                assert os.system('rm -r ' + path) == 1, "second path removal attempt failed"
-            except AssertionError as err2:
-                print(err2)
-    else:
-        try:
-            assert os.system('rm ' + path) == 1, "original path removal attempt failed"
-        except AssertionError as err1:
-            path = re.sub(r'\\', r'/', path)
-            try:
-                assert os.system('rm ' + path) == 1, "second path removal attempt failed"
-            except AssertionError as err2:
-                print(err2)
+            assert os.system('rm -r ' + path) == 0, "second path removal attempt failed"
+            print("second path removal successful")
+        except AssertionError as err2:
+            print(err2)
     for p in args:
-        rm(path = p, isdir = isdir)
+        rm(path = p)
