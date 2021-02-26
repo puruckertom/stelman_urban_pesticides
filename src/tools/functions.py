@@ -1,4 +1,4 @@
-import logging, os, sys, __main__ as main
+import logging, os, sys, re, __main__ as main
 from datetime import datetime
 # from paths import * # this causes errors, so just paste the part we need
 main_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -75,7 +75,7 @@ def replace_infile_abspaths(inp_path = None, filelines = None, new_path = None, 
             try:
                 loginfo = loginfo
             except NameError:
-                loginfo = log_prefixer(script) 
+                loginfo, logerror = log_prefixer(script)
         else:
             loginfo = print
 
@@ -92,7 +92,6 @@ def replace_infile_abspaths(inp_path = None, filelines = None, new_path = None, 
     # so instead, make a new list using the first five, a space holder, and the last two elements of the original list
     path1cols = path1cols[:5] + [""] + path1cols[-2:]
     # the corrected element of the listified line
-    # path1cols[5] = '"' + os.path.join(main_path, "probabilistic_python", "weather", "swmm_wet.txt") + '"'
     path1cols[5] = '"' + os.path.join(main_path, "master", "weather", "swmm_wet.txt") + '"'
     # insert the correction and unlistify!
     filelines[50] = "\t".join(path1cols) + "\n"
@@ -103,7 +102,6 @@ def replace_infile_abspaths(inp_path = None, filelines = None, new_path = None, 
     # so instead, make a new list using the first 2 elements of the original list and a space holder
     path2cols = path2cols[:2] + [""]
     # the corrected element of the listified line
-    # path2cols[2] = '"' + os.path.join(main_path, "app_rates", "calpip", "app_rate_output_for_swmm_48rain.txt") + '"'
     path2cols[2] = '"' + os.path.join(main_path, "master", "app_rate_output_for_swmm_48rain.txt") + '"'
     # insert the correction and unlistify!
     filelines[1384] = "\t".join(path2cols) + "\n"
@@ -114,7 +112,6 @@ def replace_infile_abspaths(inp_path = None, filelines = None, new_path = None, 
     # so instead, make a new list using the first element of the original list and a space holder
     path3cols = path3cols[:1] + [""]
     # the corrected element of the listified line
-    # path3cols[1] = '"' + os.path.join(main_path, "probabilistic_python", "input", "swmm", "nplesant.jpg") + '"'
     path3cols[1] = '"' + os.path.join(main_path, "master", "nplesant.jpg") + '"'
     # insert the correction and unlistify!
     filelines[9306] = "\t".join(path3cols) + "\n"
@@ -157,7 +154,7 @@ def save_and_continue(df,csv,msg = True):
                     script = main.script
                 except AttributeError:
                     script = os.path.basename(main.__file__)[:3]
-            loginfo = log_prefixer(script) 
+            loginfo, logerror = log_prefixer(script) 
         loginfo(msg)
     df.to_csv(csv)
     return(df)
@@ -190,7 +187,7 @@ def save_and_finish(df,csv,msg = True):
                     script = main.script
                 except AttributeError:
                     script = os.path.basename(main.__file__)[:3]
-            loginfo = log_prefixer(script) 
+            loginfo, logerror = log_prefixer(script) 
         loginfo(msg)
     df.to_csv(csv)
     return("Finished " + dn)
@@ -229,3 +226,31 @@ def editted_lines(swmm_dict, Num, row_0, parameter, Col, flines):
     sim = swmm_dict[parameter]
     # print(sim)
     return([edit1line(flines[row_0 + i], Col, sim) for i in range(Num)])
+
+'''
+Delete the file, files, or directory at a given path location
+ Inputs: path <path (str)> -path to the item(s) to be deleted-
+   isdir <bool> -True if path is a directory, False (=default) otherwise-
+ (No output)
+'''
+def rm(path, *args, isdir = False):
+    if isdir:
+        try:
+            assert os.system('rm -r ' + path) == 1, "original path removal attempt failed"
+        except AssertionError as err1:
+            path = re.sub(r'\\', r'/', path)
+            try:
+                assert os.system('rm -r ' + path) == 1, "second path removal attempt failed"
+            except AssertionError as err2:
+                print(err2)
+    else:
+        try:
+            assert os.system('rm ' + path) == 1, "original path removal attempt failed"
+        except AssertionError as err1:
+            path = re.sub(r'\\', r'/', path)
+            try:
+                assert os.system('rm ' + path) == 1, "second path removal attempt failed"
+            except AssertionError as err2:
+                print(err2)
+    for p in args:
+        rm(path = p, isdir = isdir)
