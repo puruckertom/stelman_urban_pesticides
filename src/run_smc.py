@@ -48,12 +48,12 @@ if __name__ == '__main__':
     # pyabc_construct stage starts here!
     #
     # Priors. Get the values from that csv. SWMM at first. Then VVWM. Then link them together.
-    swmm_ranges = pd.read_csv(os.path.join(master_path, "lhs_param_ranges.csv"), index_col=0, usecols = ["Parameter","Min", "Range"])
-    vvwm_ranges = pd.read_csv(os.path.join(master_path, "lhs_param_ranges_vvwm.csv"), index_col=0, usecols = ["Parameter","Min", "Range"])
+    swmm_ranges = pd.read_csv(os.path.join(master_path, "swmm_param_priors.csv"), index_col=0, usecols = ["Parameter","Min", "Range"])
+    vvwm_ranges = pd.read_csv(os.path.join(master_path, "vvwm_param_priors.csv"), index_col=0, usecols = ["Parameter","Min", "Range"])
     param_ranges = pd.concat([swmm_ranges, vvwm_ranges], axis = 0)
     # take just a tiny subset if in debug mode
-    if mode == "debug":
-        param_ranges = param_ranges.loc[['NImperv','kd']]
+    # if mode == "debug":
+        # param_ranges = param_ranges.loc[['NImperv','kd']]
     # make the dataframe into a dictionary
     priors = param_ranges.to_dict("index")
     # make the dictionary into a pyabc distribution object
