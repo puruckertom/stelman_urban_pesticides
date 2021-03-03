@@ -31,19 +31,32 @@ if __name__ == '__main__':
     If none, only the run-specific copies of the master executable and weather files will be deleted after use.
     """, required=True, type = str)
     # three args to integrate later
-    parser.add_argument("-g", "--generations", help = "Maximum number of generations to run SMC for.", required=False, type = int)
-    parser.add_argument("-n", "--popsize", help = "Number of particles per generation.", required=False, type = int)
-    parser.add_argument("-p", "--parallel", help = """Should a dask distributed (parallel) sampler 
+    parser.add_argument("-g", "--generations", help = "Number of generations to run SMC for.", required=True, type = int)
+    parser.add_argument("-p", "--popsize", help = "Number of particles per generation.", required=True, type = int)
+    parser.add_argument("-S", "--SWMMparameters", help = "Number of SWMM parameters to use.", required=False, type = int)
+    parser.add_argument("-V", "--VVWMparameters", help = "Number of VVWM parameters to use.", required=False, type = int)
+    parser.add_argument("-P", "--parallel", help = """Should a dask distributed (parallel) sampler 
     be used instead of a single core (non-parallel) sampler?""", required=False, type = bool)
     args = parser.parse_args()
+    # for simulation part
     # make them lowercase and give them shorter names to go by
     mode, swmm_cleanup, vvwm_cleanup = args.mode.lower(), args.swmmcleanup.lower(), args.vvwmcleanup.lower()
     # make sure user provided all legal values
     assert mode in ["debug", "test", "run"], 'Acceptable values of --mode include \'debug\', \'test\', and \'run\', not \'' + mode + '\'.'
     assert swmm_cleanup in ["full", "some", "none"], 'Acceptable values of --swmmcleanup include \'full\', \'some\', and \'none\', not \'' + swmm_cleanup + '\'.'
     assert vvwm_cleanup in ["full", "some", "none"], 'Acceptable values of --vvwmcleanup include \'full\', \'some\', and \'none\', not \'' + vvwm_cleanup + '\'.'
+    # for smc part
+    ngen, npop = min(max(1,args.generations), 15), min(max(args.popsize,2), 1000)
+    # optionals
+    debug_params = []
+    if args.SWMMparameters:
+        assert 1 <= args.SWMMparameters <= 16, 'SWMMparameters must be an integer in [1,16]'
+        debug_params = [i for i in range(args.SWMMparameters)]
+    if args.VVWMparameters:
+        assert 1 <= args.VVWMparameters <= 18, 'VVWMparameters must be an integer in [1,18]'
+        debug_params = debug_params + [i+16 for i in range(args.VVWMparameters)]
     # make the model using the user-input mode and cleanup levels
-    model = make_model(mode = mode, swmm_cleanup = swmm_cleanup, vvwm_cleanup = vvwm_cleanup)
+    model = make_model(mode = mode, swmm_cleanup = swmm_cleanup, vvwm_cleanup = vvwm_cleanup, debug_params = debug_params)
     #
     # pyabc_construct stage starts here!
     #
@@ -52,8 +65,8 @@ if __name__ == '__main__':
     vvwm_ranges = pd.read_csv(os.path.join(master_path, "vvwm_param_priors.csv"), index_col=0, usecols = ["Parameter","Min", "Range"])
     param_ranges = pd.concat([swmm_ranges, vvwm_ranges], axis = 0)
     # take just a tiny subset if in debug mode
-    # if mode == "debug":
-        # param_ranges = param_ranges.loc[['NImperv','kd']]
+    if mode == "debug" and debug_params:
+        param_ranges = param_ranges.iloc[debug_params]
     # make the dataframe into a dictionary
     priors = param_ranges.to_dict("index")
     # make the dictionary into a pyabc distribution object
@@ -97,8 +110,8 @@ if __name__ == '__main__':
     # Therefore, let's make a formula that's informed by NSE, but has range and properties of a distance function
     NSED = pyabc.SimpleFunctionDistance(fun = lambda x, x_0: 1 - nse(x, x_0))
     # make the pyabc Seq Monte Carlo object
-    abc = pyabc.ABCSMC(model, prior, population_size = pyabc.ConstantPopulationSize(4), sampler = sampler, distance_function = NSED)
+    abc = pyabc.ABCSMC(model, prior, population_size = pyabc.ConstantPopulationSize(npop), sampler = sampler, distance_function = NSED)
     # initialize a new run
     abc.new(db_path, obs_dict)
     # run it!
-    history = abc.run(max_nr_populations=1, minimum_epsilon=0.2)
+    history = abc.run(max_nr_populations=ngen, minimum_epsilon=0.2)
