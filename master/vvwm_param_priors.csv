@@ -5,7 +5,6 @@ aer_aq_temp,20,25,5
 anae_aq,5,730,725
 anae_aq_temp,20,25,5
 photo,96.9,416,319.1
-rflat,40,40,0
 hydro,0.1,365,364.9
 sol,0.00024063,0.744304,0.74406337
 benthic_depth,0.01,1,0.99

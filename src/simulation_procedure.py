@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[16]:
+# In[1]:
 
 
 import os, pandas as pd, numpy as np, pickle
@@ -23,7 +23,7 @@ dll_bn = os.path.basename(dll_path)
 
 # ## Set up start up vars
 
-# In[ ]:
+# In[2]:
 
 
 # sub_list_area has the areas of each subcatchment in order
@@ -37,23 +37,14 @@ with open(os.path.join(master_path,'outfall_partition.txt'),'r') as read_file:
     sub_ids = eval(read_file.read())
 
 
-# In[21]:
+# In[3]:
 
 
-"""99% sure we don't need this anymore! """
-
-# # for debug mode
-# from pyDOE2 import lhs
-# from scipy.stats import uniform
-# swmm_ranges = pd.read_csv(os.path.join(master_path, "lhs_param_ranges.csv"), index_col=0,
-#                            usecols = ["Parameter","Min", "Range"])
-# vvwm_ranges = pd.read_csv(os.path.join(master_path, "lhs_param_ranges_vvwm.csv"), index_col=0,
-#                            usecols = ["Parameter","Min", "Range"])
-# param_ranges = pd.concat([swmm_ranges, vvwm_ranges], axis = 0)
-# del swmm_ranges, vvwm_ranges
+with open(os.path.join(main_path,'master_test','test_params.txt'),'r') as read_file:
+    params = eval(read_file.read())
 
 
-# In[23]:
+# In[4]:
 
 
 # Import Observed Data
@@ -71,7 +62,7 @@ obs_data = pd.read_csv(obs_path, usecols=["Sample_date", "Site_code"],
 # 
 # Run mode is what you want to run when the code is fully baked, and you're ready to get results based on the whole dataset.
 
-# In[17]:
+# In[5]:
 
 
 # activate 
@@ -80,7 +71,7 @@ obs_data = pd.read_csv(obs_path, usecols=["Sample_date", "Site_code"],
 # mode = 'run'
 
 
-# In[ ]:
+# In[6]:
 
 
 # set cleanup level
@@ -93,13 +84,13 @@ obs_data = pd.read_csv(obs_path, usecols=["Sample_date", "Site_code"],
 # vvwm_cleanup = 'none'
 
 
-# In[ ]:
+# In[7]:
 
 
 def make_model(mode, swmm_cleanup, vvwm_cleanup):
 
 
-    # In[19]:
+    # In[8]:
 
 
     # the 7 outfall names
@@ -111,7 +102,7 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
                     'outfall_31_36', 'outfall_31_38', 'outfall_31_42']
 
 
-    # In[20]:
+    # In[9]:
 
 
     # activate mode
@@ -119,63 +110,72 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
     print(inp_path)
 
 
+    # ##### Import test Params
+    # Use the specified 2 if debug
+
+    # In[10]:
+
+
+    # for debug mode:
+    # debug_params = ["NImperv","kd"]
+    # debug_params = [0,1,16,17]  # 3/2
+
+
+    # In[11]:
+
+
+    # 
+    # if mode == "debug":
+    #     if isinstance(debug_params[0], str):
+    #         params1 = {key: params[key] for key in debug_params}
+    #     if isinstance(debug_params[0], int):
+    #         params1 = {list(params.keys())[i]: list(params.values())[i] for i in debug_params}
+    # else:
+    #     params1 = params
+
+
     # ## Set up input variables and run id
 
-    # In[22]:
-
-
-    '''
-
-    MAKE SURE TO SWITCH WP AND FC IN THE FILE! THEY ARE BACKWARDS AND IT'S ANNOYING
-    '''
-
-
-    # In[ ]:
+    # In[12]:
 
 
     def model(params1):
 
 
-        # In[24]:
+        # In[13]:
 
 
         # import test parameter input
         if mode == "debug":
-            # get them into the objects we need
-            swmm_keys = list(params1.keys())[:1]
-            vvwm_keys = list(params1.keys())[1:]
-            swmm_params = {key: params1[key] for key in swmm_keys}
-            vvwm_params = {key: params1[key] for key in vvwm_keys}
-                        
-        if mode == "test":
-            # error prevention
-            if params1['MaxRate'] < params1['MinRate']:
-                params1['MaxRate'], params1['MinRate'] = params1['MinRate'], params1['MaxRate']
-            if params1['FC'] < params1['WP']:
-                params1['FC'], params1['WP'] = params1['WP'], params1['FC']
-                
-            # get them into the objects we need
-            swmm_keys = list(params1.keys())[:17]
+            for key, value in params1.items():
+                params[key] = value
+            params1 = params
 
-            # wp and fc in this object should be switched. FOR NOW:
-            swmm_keys = swmm_keys[:10] + ['WP', 'FC'] + swmm_keys[12:]
+        # error prevention
+        if params1['MaxRate'] < params1['MinRate']:
+            params1['MaxRate'], params1['MinRate'] = params1['MinRate'], params1['MaxRate']
+        if params1['FC'] < params1['WP']:
+            params1['FC'], params1['WP'] = params1['WP'], params1['FC']
 
-            vvwm_keys = list(params1.keys())[17:]
-            swmm_params = {key: params1[key] for key in swmm_keys}
-            vvwm_params = {key: params1[key] for key in vvwm_keys}
+        # get them into the objects we need
+        swmm_keys = list(params1.keys())[:16] # 3/2
+        vvwm_keys = list(params1.keys())[16:] # 3/2
+        swmm_params = {key: params1[key] for key in swmm_keys}
+        vvwm_params = {key: params1[key] for key in vvwm_keys}
 
 
-        # In[25]:
+        # In[14]:
 
 
         # spin up simulation id with this cool too for generating random ids
         # sid = Ite = i = rpt = uuid.uuid4().hex[0:8]
         sid = uuid.uuid4().hex[0:8]
+        loginfo, logerror = log_prefixer(sid)
 
 
         # ## Step 1: make simulation-specific SWMM items
 
-        # In[27]:
+        # In[15]:
 
 
         # make paths to (soon-to-be) directory & files for this simulation using sid
@@ -195,7 +195,7 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
         sdll_path = os.path.join(sdir_path, sdll_bn) 
 
 
-        # In[28]:
+        # In[16]:
 
 
         # make the directory
@@ -212,30 +212,23 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
             # first we need to correct some absolute paths, because they are currently only set to work on the author's computer
             filelines = replace_infile_abspaths(filelines = filelines)
             
-            if mode == "debug":
-                filelines[172:(172 + 113)] = editted_lines(swmm_dict = swmm_params, Num = 113, row_0 = 172, parameter = "NImperv", Col = 1, flines = filelines)
-            
-            elif mode == "test":
-                # 113 = number of subcatchments
-                #for c, par in enumerate(["NImperv", "NPerv", "SImperv", "SPerv", "PctZero"]):
-                for c, par in enumerate(swmm_keys[0:5]):
-                    filelines[172:(172 + 113)] = editted_lines(swmm_dict = swmm_params, Num = 113, row_0 = 172, parameter = par, Col = c+1, flines = filelines)
-                #for c, par in enumerate(["MaxRate", "MinRate", "Decay", "DryTime"]):
-                for c, par in enumerate(swmm_keys[5:9]):
-                    filelines[289:(289 + 113)] = editted_lines(swmm_dict = swmm_params, Num = 113, row_0 = 289, parameter = par, Col = c+1, flines = filelines)
+            # 113 = number of subcatchments
+            #for c, par in enumerate(["NImperv", "NPerv", "SImperv", "SPerv", "PctZero"]):
+            for c, par in enumerate(swmm_keys[0:5]):
+                filelines[172:(172 + 113)] = editted_lines(swmm_dict = swmm_params, Num = 113, row_0 = 172, parameter = par, Col = c+1, flines = filelines)
+            #for c, par in enumerate(["MaxRate", "MinRate", "Decay", "DryTime"]):
+            for c, par in enumerate(swmm_keys[5:9]):
+                filelines[289:(289 + 113)] = editted_lines(swmm_dict = swmm_params, Num = 113, row_0 = 289, parameter = par, Col = c+1, flines = filelines)
 
-                # 1 = number of aquifers
-                #for c, par in enumerate(["Por", "WP", "FC", "Ksat"]):
-                for c, par in enumerate(swmm_keys[9:13]):
-                    filelines[406:(406 + 1)] = editted_lines(swmm_dict = swmm_params, Num = 1, row_0 = 406, parameter = par, Col = c+1, flines = filelines)
+            # 1 = number of aquifers
+            #for c, par in enumerate(["Por", "WP", "FC", "Ksat"]):
+            for c, par in enumerate(swmm_keys[9:13]):
+                filelines[406:(406 + 1)] = editted_lines(swmm_dict = swmm_params, Num = 1, row_0 = 406, parameter = par, Col = c+1, flines = filelines)
 
-                # 195 = number of conduits
-                # filelines[734:(734 + 195)] = editted_lines(swmm_dict = swmm_params, Num = 195, row_0 = 734, parameter = "Rough", Col = 4, flines = filelines)
-
-                # 1 = number of pollutants
-                filelines[1125:(1125 + 1)] = editted_lines(swmm_dict = swmm_params, Num = 1, row_0 = 1125, parameter = "Kdecay", Col = 5, flines = filelines)
-                filelines[1371:(1371 + 1)] = editted_lines(swmm_dict = swmm_params, Num = 1, row_0 = 1371, parameter = "BCoeff2", Col = 4, flines = filelines)
-                filelines[1377:(1377 + 1)] = editted_lines(swmm_dict = swmm_params, Num = 1, row_0 = 1377, parameter = "WCoeff2", Col = 4, flines = filelines)
+            # 1 = number of pollutants
+            filelines[1125:(1125 + 1)] = editted_lines(swmm_dict = swmm_params, Num = 1, row_0 = 1125, parameter = "Kdecay", Col = 5, flines = filelines)
+            filelines[1371:(1371 + 1)] = editted_lines(swmm_dict = swmm_params, Num = 1, row_0 = 1371, parameter = "BCoeff2", Col = 4, flines = filelines)
+            filelines[1377:(1377 + 1)] = editted_lines(swmm_dict = swmm_params, Num = 1, row_0 = 1377, parameter = "WCoeff2", Col = 4, flines = filelines)
             
             write_file.writelines(filelines)
 
@@ -247,11 +240,8 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
         # In test mode, should take about 2-3 minutes. 
         # In run mode, should take a while.
 
-        # In[14]:
+        # In[17]:
 
-
-        # set up logger
-        loginfo, logerror = log_prefixer("04")
 
         # delete pre-existing .out, if present, in order to run swmm agreeably
         if os.path.exists(sout_path):
@@ -268,11 +258,11 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
         with sim as s:
             for step in s:
                 pass
-            
+
 
         # #### Get the info to a safe place and then delete the whole temp folder 
 
-        # In[15]:
+        # In[18]:
 
 
         # extract swmm outputs with swmmtoolbox and delete expensive binary files
@@ -280,18 +270,12 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
         runf = swmmtoolbox.extract(sout_path, lab1)
         bif = swmmtoolbox.extract(sout_path, lab2)
 
-        loginfo("Deleting <" + sdir_path + "> contents to free up memory.")
-        os.system("rm " + sdir_path + "/*")
 
+        # In[19]:
 
-        # In[16]:
-
-
-        # compute daily averages
-        runf = runf.resample('D').mean()
-        bif = bif.resample('D').mean()
 
         # clean up
+
         if swmm_cleanup == 'full':
             loginfo("Deleting swmm temp files to free up memory.")#<" + sdir_path + "> contents to free up memory.")
             rm(os.path.join(sdir_path,"*"))
@@ -301,9 +285,17 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
         elif swmm_cleanup == 'none':
             loginfo("Deleting swmm dll file to free up memory.")#<" + sdir_path + "> contents to free up memory.")
             rm(sdll_path)
-        
-        
-        # In[17]:
+
+
+        # In[20]:
+
+
+        # compute daily averages
+        runf = runf.resample('D').mean()
+        bif = bif.resample('D').mean()
+
+
+        # In[21]:
 
 
         # conversion for vvwm for runoff and bifenthrin
@@ -311,7 +303,7 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
         bif = bif.mul(runf.values)
 
 
-        # In[18]:
+        # In[22]:
 
 
         for o in outfalls:
@@ -359,7 +351,7 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
                 write_file.writelines(filelines) #JMS 10-21-20
 
 
-        # In[19]:
+        # In[23]:
 
 
         # create a blank df to populate
@@ -373,22 +365,21 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
             with open(vvwmTransfer_path,"r") as read_file:
                 filelines = read_file.readlines()
             
-            if mode == "debug":
-                filelines[4] = str(vvwm_params[vvwm_keys[0]]) + "\n"
+            for c, param in enumerate(list(vvwm_keys)[0:6]): 
+                filelines[c+4] = str(vvwm_params[param]) + "\n"
                 
-            elif mode == "test":
+            # filelines[10] = str(40)
+            filelines[11] = str(vvwm_params[vvwm_keys[6]]) + "\n"
+            # for c, param in enumerate(list(vvwm_keys)[6:7]): 
+            #     filelines[c+4+6+1] = str(vvwm_params[param]) + "\n"
 
-                # why is it 1:8 and not 0:8? Is it a typo?
-                for c, param in enumerate(list(vvwm_keys)[0:8]): # changed from 1:8 2/19/21
-                    filelines[c+4] = str(vvwm_params[param]) + "\n"
+            filelines[17] = str(vvwm_params[vvwm_keys[7]]) + "\n"
 
-                filelines[17] = str(vvwm_params[vvwm_keys[8]]) + "\n"
+            for c, param in enumerate(list(vvwm_keys)[8:14]):
+                filelines[c+40] = str(vvwm_params[param]) + "\n"
 
-                for c, param in enumerate(list(vvwm_keys)[9:15]):
-                    filelines[c+40] = str(vvwm_params[param]) + "\n"
-
-                for c, param in enumerate(list(vvwm_keys)[15:19]):
-                    filelines[c+47] = str(vvwm_params[param]) + "\n"
+            for c, param in enumerate(list(vvwm_keys)[14:18]):
+                filelines[c+47] = str(vvwm_params[param]) + "\n"
 
             # enter script 9
             '''
@@ -462,13 +453,13 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
         output_df = output_df.set_index([["_".join([a,b[3:]]) for a,b in output_df.index]]).sort_index()
 
 
-        # In[20]:
+        # In[24]:
 
 
         output_dict = output_df.to_dict()['davg_bif_conc']
 
 
-        # In[21]:
+        # In[25]:
 
 
         # vvwm cleanup
@@ -492,17 +483,17 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):
             rm(sdir_path)
 
 
-        # In[22]:
+        # In[26]:
 
 
         return(output_dict)
         # output_dict
 
 
-        # In[ ]:
+        # In[29]:
 
 
     return(model)
 
 
-    # ### We made it to the post-processing stage!
+        # ### We made it to the post-processing stage!
