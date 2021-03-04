@@ -4,11 +4,10 @@
 # In[1]:
 
 
-import os, pandas as pd, numpy as np, pickle
-import pytest_shutil, shutil, regex as re, dask, uuid
+import os, pandas as pd, numpy as np
+import pytest_shutil, shutil, regex as re, uuid
 from pyswmm import Simulation
 import swmmtoolbox.swmmtoolbox as swmmtoolbox
-import time
 from pyswmm.lib import DLL_SELECTION
 import subprocess
 
@@ -368,10 +367,7 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup, debug_params = []):
             for c, param in enumerate(list(vvwm_keys)[0:6]): 
                 filelines[c+4] = str(vvwm_params[param]) + "\n"
                 
-            # filelines[10] = str(40)
             filelines[11] = str(vvwm_params[vvwm_keys[6]]) + "\n"
-            # for c, param in enumerate(list(vvwm_keys)[6:7]): 
-            #     filelines[c+4+6+1] = str(vvwm_params[param]) + "\n"
 
             filelines[17] = str(vvwm_params[vvwm_keys[7]]) + "\n"
 
@@ -428,7 +424,7 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup, debug_params = []):
             elif sys.platform == "win32":
                 exe_bn = "VVWM.exe"
             old_exe_path = os.path.join(exe_path, exe_bn)
-            new_exe_path = os.path.join(outfall_dir, "VVWM.exe")
+            new_exe_path = os.path.join(outfall_dir, exe_bn)
             shutil.copyfile(old_exe_path, new_exe_path)
             
             # run vvwm.exe (vvwm.exe [...]/outfall_31_xx/vvwmTransfer.txt)
