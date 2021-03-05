@@ -86,7 +86,7 @@ obs_data = pd.read_csv(obs_path, usecols=["Sample_date", "Site_code"],
 # In[7]:
 
 
-def make_model(mode, swmm_cleanup, vvwm_cleanup, debug_params = []):
+def make_model(mode, swmm_cleanup, vvwm_cleanup):#, debug_params = []):
 
 
     # In[8]:
@@ -124,13 +124,13 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup, debug_params = []):
 
 
     # 
-    if mode == "debug" and debug_params:
-        if isinstance(debug_params[0], str):
-            params1 = {key: params[key] for key in debug_params}
-        if isinstance(debug_params[0], int):
-            params1 = {list(params.keys())[i]: list(params.values())[i] for i in debug_params}
-    else:
-        params1 = params
+    # if mode == "debug" and debug_params:
+    #     if isinstance(debug_params[0], str):
+    #         params1 = {key: params[key] for key in debug_params}
+    #     if isinstance(debug_params[0], int):
+    #         params1 = {list(params.keys())[i]: list(params.values())[i] for i in debug_params}
+    # else:
+    #     params1 = params
 
 
     # ## Set up input variables and run id

@@ -18,29 +18,41 @@ if __name__ == '__main__':
     run of the simulation procedure by using a small sample of the data.\n
     Run mode is what you want to run when the code is fully baked, 
     and you're ready to get results based on the whole dataset.""", required=True, type = str)
-    parser.add_argument("-s", "--swmmcleanup", help = """
-    Specify SWMM cleanup level as 'full', 'some', or 'none':\n
-    If full, each swmm-related file will be deleted after fulfilling its use to save memory.\n
-    If some, executable and binary swmm-related files will be deleted after use, but human-readable files won't.\n
-    If none, only the run-specific copy of the master executable (dll) file will be deleted after use.
-    """, required=True, type = str)
-    parser.add_argument("-v", "--vvwmcleanup", help = """
-    Specify vvwm cleanup level as 'full', 'some', or 'none':\n
-    If full, each vvwm-related file will be deleted after fulfilling its use to save memory.\n
-    If some, all vvwm-related files but one, the human-readable daily output csv file, will be deleted after use.\n
-    If none, only the run-specific copies of the master executable and weather files will be deleted after use.
-    """, required=True, type = str)
+    parser.add_argument("-c", "--cleanup", nargs = 2, metavar = ("SWMMcleanup", "VVWMcleanup"), help = """
+    Specify SWMM and VVWM cleanup levels, each as 'full', 'some', or 'none':\n
+    * SWMMcleanup:\n 
+    - If full, each swmm-related file will be deleted after fulfilling its use to save memory.\n 
+    - If some, executable and binary swmm-related files will be deleted after use, but human-readable files won't.\n 
+    - If none, only the run-specific copy of the master executable (dll) file will be deleted after use.\n
+    * VVWMcleanup:\n 
+    - If full, each vvwm-related file will be deleted after fulfilling its use to save memory.\n 
+    - If some, all vvwm-related files but one, the human-readable daily output csv file, will be deleted after use.\n 
+    - If none, only the run-specific copies of the master executable and weather files will be deleted after use.
+    """, required=True, type = str, choices = {"full","some","none"})
+    # parser.add_argument("-s", "--swmmcleanup", help = """
+    # Specify SWMM cleanup level as 'full', 'some', or 'none':\n
+    # If full, each swmm-related file will be deleted after fulfilling its use to save memory.\n
+    # If some, executable and binary swmm-related files will be deleted after use, but human-readable files won't.\n
+    # If none, only the run-specific copy of the master executable (dll) file will be deleted after use.
+    # """, required=True, type = str)
+    # parser.add_argument("-v", "--vvwmcleanup", help = """
+    # Specify vvwm cleanup level as 'full', 'some', or 'none':\n
+    # If full, each vvwm-related file will be deleted after fulfilling its use to save memory.\n
+    # If some, all vvwm-related files but one, the human-readable daily output csv file, will be deleted after use.\n
+    # If none, only the run-specific copies of the master executable and weather files will be deleted after use.
+    # """, required=True, type = str)
     # three args to integrate later
     parser.add_argument("-g", "--generations", help = "Number of generations to run SMC for.", required=True, type = int)
-    parser.add_argument("-p", "--popsize", help = "Number of particles per generation.", required=True, type = int)
-    parser.add_argument("-S", "--SWMMparameters", help = "Number of SWMM parameters to use.", required=False, type = int)
-    parser.add_argument("-V", "--VVWMparameters", help = "Number of VVWM parameters to use.", required=False, type = int)
-    parser.add_argument("-P", "--parallel", help = """Should a dask distributed (parallel) sampler 
-    be used instead of a single core (non-parallel) sampler?""", required=False, type = bool)
+    parser.add_argument("-n", "--popsize", help = "Number of particles per generation.", required=True, type = int)
+    parser.add_argument("-s", "--SWMMparameters", help = "Number of SWMM parameters to use.", required = False, type = int)
+    parser.add_argument("-v", "--VVWMparameters", help = "Number of VVWM parameters to use.", required = False, type = int)
+    parser.add_argument("-p", "--parallel", help = """Should a dask distributed (parallel) sampler 
+    be used instead of a single core (non-parallel) sampler?""", action = 'store_true')#, required=False, type = bool)
     args = parser.parse_args()
     # for simulation part
     # make them lowercase and give them shorter names to go by
-    mode, swmm_cleanup, vvwm_cleanup = args.mode.lower(), args.swmmcleanup.lower(), args.vvwmcleanup.lower()
+    # mode, swmm_cleanup, vvwm_cleanup = args.mode.lower(), args.swmmcleanup.lower(), args.vvwmcleanup.lower()
+    mode, swmm_cleanup, vvwm_cleanup = args.mode.lower(), args.cleanup[0].lower(), args.cleanup[1].lower()
     # make sure user provided all legal values
     assert mode in ["debug", "test", "run"], 'Acceptable values of --mode include \'debug\', \'test\', and \'run\', not \'' + mode + '\'.'
     assert swmm_cleanup in ["full", "some", "none"], 'Acceptable values of --swmmcleanup include \'full\', \'some\', and \'none\', not \'' + swmm_cleanup + '\'.'
@@ -56,7 +68,7 @@ if __name__ == '__main__':
         assert 1 <= args.VVWMparameters <= 18, 'VVWMparameters must be an integer in [1,18]'
         debug_params = debug_params + [i+16 for i in range(args.VVWMparameters)]
     # make the model using the user-input mode and cleanup levels
-    model = make_model(mode = mode, swmm_cleanup = swmm_cleanup, vvwm_cleanup = vvwm_cleanup, debug_params = debug_params)
+    model = make_model(mode = mode, swmm_cleanup = swmm_cleanup, vvwm_cleanup = vvwm_cleanup)#, debug_params = debug_params)
     #
     # pyabc_construct stage starts here!
     #
@@ -83,7 +95,13 @@ if __name__ == '__main__':
         with open(os.path.join(main_path, 'master','obs_data.txt'),'r') as read_file:
             obs_dict = eval(read_file.read())
     # use the single core sampler for now because dask is being fussy
-    sampler = pyabc.sampler.SingleCoreSampler()
+    # Parallel
+    if args.parallel:
+        from dask.distributed import Client
+        client = Client()
+        sampler = pyabc.sampler.DaskDistributedSampler(dask_client = client)
+    else:
+        sampler = pyabc.sampler.SingleCoreSampler()
     # make the process more transparent
     sampler.sample_factory.record_rejected = True
     sampler.show_progress = True
