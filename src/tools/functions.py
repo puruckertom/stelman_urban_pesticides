@@ -10,7 +10,8 @@ logging.basicConfig(filename='pyabc.log', level=logging.INFO)
 '''
 Sets up the function 'loginfo' with the appropriate prefix for the current script
  Input: script <str> -Script's ID, will be used in prefix of logging messages (ex. '01a', '08', '10')-
- Output: loginfo <function> -Function that takes in a message and logs it with the appropriate prefix for current script-
+ Output: loginfo <function> -Function that takes in a message and logs it as info with the appropriate prefix for current script-
+   logerror <funtion> -Function that takes in a message and logs it as error with the appropriate prefix for current script-
 '''
 def log_prefixer(script):
     def loginfo(text):
