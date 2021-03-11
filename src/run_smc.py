@@ -29,19 +29,6 @@ if __name__ == '__main__':
     - If some, all vvwm-related files but one, the human-readable daily output csv file, will be deleted after use.\n 
     - If none, only the run-specific copies of the master executable and weather files will be deleted after use.
     """, required=True, type = str, choices = {"full","some","none"})
-    # parser.add_argument("-s", "--swmmcleanup", help = """
-    # Specify SWMM cleanup level as 'full', 'some', or 'none':\n
-    # If full, each swmm-related file will be deleted after fulfilling its use to save memory.\n
-    # If some, executable and binary swmm-related files will be deleted after use, but human-readable files won't.\n
-    # If none, only the run-specific copy of the master executable (dll) file will be deleted after use.
-    # """, required=True, type = str)
-    # parser.add_argument("-v", "--vvwmcleanup", help = """
-    # Specify vvwm cleanup level as 'full', 'some', or 'none':\n
-    # If full, each vvwm-related file will be deleted after fulfilling its use to save memory.\n
-    # If some, all vvwm-related files but one, the human-readable daily output csv file, will be deleted after use.\n
-    # If none, only the run-specific copies of the master executable and weather files will be deleted after use.
-    # """, required=True, type = str)
-    # three args to integrate later
     parser.add_argument("-g", "--generations", help = "Number of generations to run SMC for.", required=True, type = int)
     parser.add_argument("-n", "--popsize", help = "Number of particles per generation.", required=True, type = int)
     parser.add_argument("-s", "--SWMMparameters", help = "Number of SWMM parameters to use.", required = False, type = int)
@@ -51,7 +38,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     # for simulation part
     # make them lowercase and give them shorter names to go by
-    # mode, swmm_cleanup, vvwm_cleanup = args.mode.lower(), args.swmmcleanup.lower(), args.vvwmcleanup.lower()
     mode, swmm_cleanup, vvwm_cleanup = args.mode.lower(), args.cleanup[0].lower(), args.cleanup[1].lower()
     # make sure user provided all legal values
     assert mode in ["debug", "test", "run"], 'Acceptable values of --mode include \'debug\', \'test\', and \'run\', not \'' + mode + '\'.'
@@ -82,9 +68,8 @@ if __name__ == '__main__':
     # make the dataframe into a dictionary
     priors = param_ranges.to_dict("index")
     # make the dictionary into a pyabc distribution object
-    # borrowed from Jeff: <https://github.com/JeffreyMinucci/bee_neonic_abc/blob/master/pyabc_run.ipynb>
     prior = pyabc.Distribution(**{key: pyabc.RV("uniform", loc = v['Min'], scale = v['Range']) for key, v in priors.items()})
-    # import the dictionary of observed data (benchmarks for summary statistic comparison) depending on the mode
+    # import the dictionary of observed data (benchmarks for comparison) depending on the mode
     if mode == 'debug':
         with open(os.path.join(main_path, 'master_debug','debug_obs_data.txt'),'r') as read_file:
             obs_dict = eval(read_file.read())
@@ -108,6 +93,7 @@ if __name__ == '__main__':
     # Set up a sqlite db directory with a unique random identifier
     dbid = uuid.uuid4().hex[0:8]
     print("Database ID: " + dbid)
+    # compose path to run-specific database
     database_dir = os.path.join(temp_path, 'results_db')  
     if not os.path.exists(database_dir):
         os.mkdir(database_dir)
@@ -115,7 +101,7 @@ if __name__ == '__main__':
     # make a file to hold onto these NSEs for our own record
     with open(os.path.join(temp_path, "NSEs_" + dbid + ".txt"), "w") as nse_file:
         nse_file.write("NSEs\n")
-    # make NSE and NSE distance calculating functions
+    # define NSE Distance function: Calculate NSE with hydroeval library and the subtract 1 from it to get NSED
     def nse(x, x_0):
         nse = he.evaluator(he.nse, simulation_s = np.array(list(x.values())), evaluation = np.array(list(x_0.values())))[0]
         print("nse ", nse)
