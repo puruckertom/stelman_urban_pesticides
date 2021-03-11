@@ -4,96 +4,75 @@
 # In[1]:
 
 
+# import required modules
 import os, pandas as pd, numpy as np
 import pytest_shutil, shutil, regex as re, uuid
 from pyswmm import Simulation
 import swmmtoolbox.swmmtoolbox as swmmtoolbox
 from pyswmm.lib import DLL_SELECTION
 import subprocess
-
+# import objects from tools scripts
 from tools.paths import *
 from tools.functions import *
 
-# this is the path to the default dynamic link library used for running SWMM
-# used by 04
+# save the path to the default dynamic link library used for running SWMM
 dll_path = DLL_SELECTION()
 dll_bn = os.path.basename(dll_path)
 
 
-# ## Set up start up vars
+# ## Import objects from files
 
 # In[2]:
 
 
-# sub_list_area has the areas of each subcatchment in order
-# used by 05
+# Import a list of the areas of each subcatchment in order
 with open(os.path.join(master_path,'sub_list_area.txt'),'r') as read_file:
     sub_list_area = eval(read_file.read())
 
-# sub_ids is the dictionary detailing which subcatchments make up which outfalls
-# used by 05
+# Import the dictionary detailing which subcatchments make up which outfalls
 with open(os.path.join(master_path,'outfall_partition.txt'),'r') as read_file:
     sub_ids = eval(read_file.read())
 
-
-# In[3]:
-
-
+# Import (a dictionary of) a test set of inputs for the params1 argument of the model() function
 with open(os.path.join(main_path,'master_test','test_params.txt'),'r') as read_file:
     params = eval(read_file.read())
 
-
-# In[4]:
-
-
-# Import Observed Data
+# Import observed data
 obs_data = pd.read_csv(obs_path, usecols=["Sample_date", "Site_code"],
                        parse_dates=["Sample_date"])
 
-
-# #### Set mode: 
-# 
-# ##### Specify if you want to use 'debug', 'test', or 'run' mode 
-# 
-# Debug mode is designed to test code quickly to expose bugs in runs. It only uses 2 of the 36 paramters, 1 of the 7 outfalls, 3 of the 106 summary statistics, and a 103-day-subset of the 3287-day timeframe of the data.
-# 
-# Test mode is designed to impersonate a, minimally time-consuming but complete, run of the simulation procedure by using a small sample of the data.
-# 
-# Run mode is what you want to run when the code is fully baked, and you're ready to get results based on the whole dataset.
-
-# In[5]:
-
-
-# activate 
-# mode = 'debug'
-# mode = 'test'
-# mode = 'run'
-
-
-# In[6]:
-
-
-# set cleanup level
-# swmm_cleanup = 'full'
-# swmm_cleanup = 'some'
-# swmm_cleanup = 'none'
-
-# vvwm_cleanup = 'full'
-# vvwm_cleanup = 'some'
-# vvwm_cleanup = 'none'
-
+# ## Define make_model() function:
 
 # In[7]:
 
 
-def make_model(mode, swmm_cleanup, vvwm_cleanup):#, debug_params = []):
+'''
+Creates model() function and sets up environment according to specifics provided
+ Inputs: mode <str> -Either 'debug', 'test', or 'run'-
+     -Debug mode tests code quickly to expose bugs in runs-
+     -Test mode impersonates a shortened, but complete, run of the simulation procedure, using a small sample of the data-
+     -Run mode (when the code is fully baked) takes forever and gives results based on the whole dataset-
+   swmm_cleanup <str> -Either 'full', 'some', or 'none'-
+     -If full, each swmm-related file will be deleted after fulfilling its use to save memory-
+     -If some, executable and binary swmm-related files will be deleted after use, but human-readable files won't-
+     -If none, only the run-specific copy of the master executable (dll) file will be deleted after use-
+   vvwm_cleanup <str> -Either 'full', 'some', or 'none'-
+     -If full, each vvwm-related file will be deleted after fulfilling its use to save memory-
+     -If some, all vvwm-related files but one, the human-readable daily output csv file, will be deleted after use-
+     -If none, only the run-specific copies of the master executable and weather files will be deleted after use-
+   debug_params <list of unique integers in [0,33]> -indices of parameters to use in model() instead of full set-
+     -If empty (default), signals model() to use full set-
+ Output: model <function> -Takes in dict of parameters, runs a simulation, and outputs dict of summary statistics-
+'''
+def make_model(mode, swmm_cleanup, vvwm_cleanup, debug_params = []):
 
+
+    # ### Activate mode
 
     # In[8]:
 
 
-    # the 7 outfall names
-    # used by 05+ 
+    # get outfall names into a list: 1 outfall name if debug mode, 7 outfall names otherwise
     if mode == "debug":
         outfalls = ['outfall_31_28']
     else:
@@ -104,59 +83,49 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):#, debug_params = []):
     # In[9]:
 
 
-    # activate mode
+    # set input path according to mode given
     inp_path = set_inp_path(mode)
     print(inp_path)
 
 
-    # ##### Import test Params
-    # Use the specified 2 if debug
-
-    # In[10]:
-
-
-    # for debug mode:
-    # debug_params = ["NImperv","kd"]
-    # debug_params = [0,1,16,17]  # 3/2
-
-
-    # In[11]:
-
-
-    # 
-    # if mode == "debug" and debug_params:
-    #     if isinstance(debug_params[0], str):
-    #         params1 = {key: params[key] for key in debug_params}
-    #     if isinstance(debug_params[0], int):
-    #         params1 = {list(params.keys())[i]: list(params.values())[i] for i in debug_params}
-    # else:
-    #     params1 = params
-
-
-    # ## Set up input variables and run id
+    # ## Define model() function:
 
     # In[12]:
 
 
+    '''
+    Simulates bifenthin application events and rain events over the course of time in an urban setting.
+    Uses multistage model to predict periodic subcatchment contamination fate based on simulated events and given parameters.
+    Returns bifenthrin concentration estimates specific to a set of date-site pairs for which field data exists.
+    Inputs: params1 <dict> -Dictionary of parameters (of interest) used in SWMM and VVWM modeling procedures and their values-
+    Output: output_dict <dict> -Dictionary summarizing model outcomes-
+        -Keys: a date followed by a site identifier (ie. yyyy-mm-dd_xx, where xx is the 2-digit suffix of the outfall name)-
+        -Values: a (date, site)-specific average of the simulation-estimated bifenthrin concentrations its key pertains to-
+    '''
     def model(params1):
 
+
+        # #### Set up input variables and simulation id
 
         # In[13]:
 
 
-        # import test parameter input
         if mode == "debug":
+            # Fill in params1 with whichever of the 34 parameters are not provided as inputs with the defaults from test_params
             for key, value in params1.items():
                 params[key] = value
             params1 = params
 
-        # error prevention
+        # Error prevention: 
+        # In real life, these situations would be impossible.
+        # Since these parameters are simulated, they need to be watched out for and fixed.
+        # If they are overlooked, the model will fail early during simulation.
         if params1['MaxRate'] < params1['MinRate']:
             params1['MaxRate'], params1['MinRate'] = params1['MinRate'], params1['MaxRate']
         if params1['FC'] < params1['WP']:
             params1['FC'], params1['WP'] = params1['WP'], params1['FC']
 
-        # get them into the objects we need
+        # partition parameters into the ones for swmm and the ones for vvwm
         swmm_keys = list(params1.keys())[:16] # 3/2
         vvwm_keys = list(params1.keys())[16:] # 3/2
         swmm_params = {key: params1[key] for key in swmm_keys}
@@ -167,8 +136,8 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):#, debug_params = []):
 
 
         # spin up simulation id with this cool too for generating random ids
-        # sid = Ite = i = rpt = uuid.uuid4().hex[0:8]
         sid = uuid.uuid4().hex[0:8]
+        # set up logging
         loginfo, logerror = log_prefixer(sid)
 
 
@@ -188,23 +157,23 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):#, debug_params = []):
         # report file
         srpt_path = os.path.join(sdir_path, sid) + ".rpt"
         # dynamic link library file
-        ## basename
+        ## dll basename
         sdll_bn = dll_bn[:dll_bn.rindex(".")] + '-' + sid + dll_bn[dll_bn.rindex("."):]
-        ## full path
+        ## dll full path
         sdll_path = os.path.join(sdir_path, sdll_bn) 
 
 
         # In[16]:
 
 
-        # make the directory
+        # make the directory for which we just constructed a path
         if not os.path.exists(sdir_path):
             os.mkdir(sdir_path)
             print("Folder ", sid, " created", "\n")
         else:
             print("Folder ", sid, "already exists")
 
-        # write input file
+        # make swmm input file:
         with open(inp_path, "r") as read_file, open(sinp_path, "w") as write_file:
             filelines = read_file.readlines()
 
@@ -229,6 +198,7 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):#, debug_params = []):
             filelines[1371:(1371 + 1)] = editted_lines(swmm_dict = swmm_params, Num = 1, row_0 = 1371, parameter = "BCoeff2", Col = 4, flines = filelines)
             filelines[1377:(1377 + 1)] = editted_lines(swmm_dict = swmm_params, Num = 1, row_0 = 1377, parameter = "WCoeff2", Col = 4, flines = filelines)
             
+            # write the changes to the file
             write_file.writelines(filelines)
 
         # copy a dll file into sdll_path
@@ -242,6 +212,7 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):#, debug_params = []):
         # In[17]:
 
 
+        # Error prevention
         # delete pre-existing .out, if present, in order to run swmm agreeably
         if os.path.exists(sout_path):
             loginfo("Deleting current copy of <" + sout_path + "> so new copy can be created.")
@@ -249,17 +220,16 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):#, debug_params = []):
             os.remove(sout_path)
 
         # load the model {no interaction, write (binary) results to sout_path, use the specified dll}
-
         sim = Simulation(inputfile=sinp_path, reportfile=srpt_path, outputfile=sout_path, swmm_lib_path=sdll_path)
-        # if no errors were thrown, we procede with the simulation
         # simulate the loaded model
         loginfo("Executing SWMM simmulation with no interaction. Input from <" + sinp_path + ">. Will store output in <" + sout_path + ">.")
+        # use for-loop to avoid runtime costs due to excessive logging
         with sim as s:
             for step in s:
                 pass
 
 
-        # #### Get the info to a safe place and then delete the whole temp folder 
+        # #### Get the info to a safe place and then clean up
 
         # In[18]:
 
@@ -274,15 +244,14 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):#, debug_params = []):
 
 
         # clean up
-
         if swmm_cleanup == 'full':
-            loginfo("Deleting swmm temp files to free up memory.")#<" + sdir_path + "> contents to free up memory.")
+            loginfo("Deleting swmm temp files to free up memory.")
             rm(os.path.join(sdir_path,"*"))
         elif swmm_cleanup == 'some':
-            loginfo("Deleting large swmm temp files to free up memory.")#<" + sdir_path + "> contents to free up memory.")
+            loginfo("Deleting large swmm temp files to free up memory.")
             rm(sout_path, sdll_path)
         elif swmm_cleanup == 'none':
-            loginfo("Deleting swmm dll file to free up memory.")#<" + sdir_path + "> contents to free up memory.")
+            loginfo("Deleting swmm dll file to free up memory.")
             rm(sdll_path)
 
 
@@ -297,8 +266,14 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):#, debug_params = []):
         # In[21]:
 
 
-        # conversion for vvwm for runoff and bifenthrin
+        # unit conversion for vvwm: runoff and bifenthrin
+        ## Runoff
+        ### 1. multiply by 86400 to convert days into seconds
+        ### 2. multiply by 0.01 to convert square meters to hectares
+        ### 3. divide by area of subcatchment (hectares) to get per-hectare volumes
         runf = runf.mul(86400).mul(0.01).div(sub_list_area)
+        ## Bifenthrin
+        ### multiply by runoff volume to get ????
         bif = bif.mul(runf.values)
 
 
@@ -306,20 +281,20 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):#, debug_params = []):
 
 
         for o in outfalls:
-            # set pathways
+            # create outfall directory path
             outfall_dir = os.path.join(sdir_path, o)
             
-            # make the directory
+            # make the directory for which we just constructed a path
             if not os.path.exists(outfall_dir):
                 os.mkdir(outfall_dir)
                 print("Folder ", sid, o, " created", "\n")
             else:
                 print("Folder ", sid, o, "already exists")
             
-            # create .zts file 
-            # has 1 at each subcatchment of outfall[o], and 0 at the rest
+            # create a vector to strain the outfall[o]-specific subcatchments out of the 113 subcatchments
+            # weights vector has 1 at each index corresponding to a subcatchment of outfall[o], and 0 at the rest
             weights = np.array([(1 if x in sub_ids[o] else 0) for x in range(113)])
-            # we want the daily totals the runoff and bifenthrin within each outfall
+            # we want the daily totals of the runoff and bifenthrin within outfall[o]
             # use dot product and the weights vector to evaluate this on the df
             runf_sum = runf @ weights
             bif_sum = bif @ weights
@@ -334,20 +309,20 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):#, debug_params = []):
                                 "MEp":0
                             })
             
-            # read out into comma-delimited .txt file
-            vvwm_df.to_csv(os.path.join(outfall_dir, "output.zts"), 
-                        header=False, index=False, sep=',')
+            # make swmm output data into vvwm input file
+            outfall_path = os.path.join(outfall_dir, "output.zts")
+            # read out into comma-delimited .zts file
+            vvwm_df.to_csv(outfall_path, header=False, index=False, sep=',')
 
             # for this to work, we need to write 3 blank lines to the beginning
-            # read in the file we just wrote
-            with open(os.path.join(outfall_dir, "output.zts"), "r") as read_file:
+            with open(outfall_path, "r") as read_file:
                 filelines = read_file.readlines()
             # write this back into it with 3 lines added to the beginning
-            with open(os.path.join(outfall_dir, "output.zts"), "w") as write_file:
-                # write blanks to dummy file
+            with open(outfall_path, "w") as write_file:
+                # write blanks to file
                 write_file.write('\n\n\n')
-                # read lines from original and append to dummy file
-                write_file.writelines(filelines) #JMS 10-21-20
+                # append original lines to file after blank lines
+                write_file.writelines(filelines)
 
 
         # In[23]:
@@ -357,37 +332,29 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):#, debug_params = []):
         output_df = pd.DataFrame()
 
         for o in outfalls:
-            # set pathways
+            # create outfall directory path and outfall file path
             outfall_dir = os.path.join(sdir_path, o)
             outfall_file = os.path.join(outfall_dir, "vvwmTransfer.txt")
             
+            # make vvwm setup file for outfall o:
             with open(vvwmTransfer_path,"r") as read_file:
                 filelines = read_file.readlines()
             
+            # update parameter values
             for c, param in enumerate(list(vvwm_keys)[0:6]): 
                 filelines[c+4] = str(vvwm_params[param]) + "\n"
-                
             filelines[11] = str(vvwm_params[vvwm_keys[6]]) + "\n"
-
             filelines[17] = str(vvwm_params[vvwm_keys[7]]) + "\n"
-
             for c, param in enumerate(list(vvwm_keys)[8:14]):
                 filelines[c+40] = str(vvwm_params[param]) + "\n"
-
             for c, param in enumerate(list(vvwm_keys)[14:18]):
                 filelines[c+47] = str(vvwm_params[param]) + "\n"
 
-            # enter script 9
-            '''
-            Should I keep this parallel?
-            If not, I don't need 7 copies of the weather file
-            If I do keep it parallel, how much time does that even save?
-            '''
-
-            ''' Keeping it parallel:'''
-            # update pathways
+            # Update path to (swmm) output (aka, vvwm input) data file
             filelines[0] = os.path.join(outfall_dir, "output") + '\n'
+            # Update path to weather file
             filelines[29] = os.path.join(outfall_dir, "vvwm_wet.dvf") + '\n'
+            # Insert paths that don't and won't exist, but need to be included as a technicality or else the model won't run
             filelines[68] = os.path.join(outfall_dir, "output_NPlesant_Custom_parent_daily.csv") + '\n'
             filelines[69] = os.path.join(outfall_dir, "output_NPlesant_Custom_deg1_daily.csv") + '\n'
             filelines[70] = os.path.join(outfall_dir, "output_NPlesant_Custom_deg2_daily.csv") + '\n'
@@ -431,34 +398,48 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):#, debug_params = []):
             command = new_exe_path + ' ' + outfall_file
             subprocess.call(command)
             
+            # simulated data vs field data units conversion:
+            ## Simulation data conc: units = kg/m^3
+            ## Observed data conc: units = micrograms/L
+            # unit conversion: (meters^3 / liter) & (micrograms / kilogram)
+            m3_per_L, mcrg_per_kg = 0.001, 1000000000
+            
             # read in produced data from the output of the vvwm run we just completed
             output = pd.read_csv(filelines[68][:-1], 
-                                usecols = [1], skiprows=5, names = ["davg_bif_conc"])*1000000
+                                usecols = [1], skiprows=5, names = ["davg_bif_conc"]) * m3_per_L * mcrg_per_kg
+            ## Conversion process: Kg/m^3 * 1m^3/1000L * 1000000000 micrograms/kg = 1000000 * 1microgram/L
+
+            # add a date column
             if mode == 'debug':
                 output['Sample_date'] = pd.date_range(start='1/1/2009', periods=103, freq='D')
             elif mode == 'test':
                 output['Sample_date'] = pd.date_range(start='1/1/2009', periods=778, freq='D')
             elif mode == 'run':
                 output['Sample_date'] = pd.date_range(start='1/1/2009', periods=3287, freq='D')
+            # add a location columns
             output['Site_code'] = o[-5:]
+            # sift out only the rows with dates and sites that there is also field data available for
             output = output.merge(obs_data, how = "inner", on = ['Sample_date','Site_code'])
+            # change index to a (date, site) pair
             output.set_index([np.datetime_as_string(output.Sample_date, unit = 'D'),'Site_code'], inplace = True)
+            # add this df to the df that contains the dfs of all outfalls
             output_df = output_df.append(output[['davg_bif_conc',]], ignore_index = False)
 
-        # sort by date and site
+        # label and sort by date and site
         output_df = output_df.set_index([["_".join([a,b[3:]]) for a,b in output_df.index]]).sort_index()
 
 
         # In[24]:
 
 
+        # conver data frame to dictionary
         output_dict = output_df.to_dict()['davg_bif_conc']
 
 
         # In[25]:
 
 
-        # vvwm cleanup
+        # cleanup
         if vvwm_cleanup == 'none' or vvwm_cleanup == 'some' or vvwm_cleanup == 'full':
             exe_ = os.path.join(sdir_path, "outfall_31_??", exe_bn)
             wet_ = os.path.join(sdir_path, "outfall_31_??", "vvwm_wet.dvf")
@@ -486,10 +467,7 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup):#, debug_params = []):
         # output_dict
 
 
-        # In[29]:
+        # In[27]:
 
 
     return(model)
-
-
-        # ### We made it to the post-processing stage!
