@@ -67,7 +67,7 @@ Creates model() function and sets up environment according to specifics provided
 def make_model(mode, swmm_cleanup, vvwm_cleanup, debug_params = []):
 
 
-    # ### Activate mode
+    # #### Activate mode
 
     # In[8]:
 
@@ -141,7 +141,7 @@ def make_model(mode, swmm_cleanup, vvwm_cleanup, debug_params = []):
         loginfo, logerror = log_prefixer(sid)
 
 
-        # ## Step 1: make simulation-specific SWMM items
+        # #### Make simulation-specific SWMM items
 
         # In[15]:
 
